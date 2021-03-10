@@ -360,14 +360,16 @@ pushd $ml_api_dir
 build_dir=build_android_$build_type
 mkdir -p $build_dir
 
+# @todo We need another mechanism for downloading third-party/external softwares
+svn --force export https://github.com/nnstreamer/nnstreamer-android-resource/trunk/android_api ./$build_dir
+
+mv ./$build_dir/api ./$build_dir/nnstreamer
+
 # Copy the files (native and java to build Android library) to build directory
 cp -r ./java/android/* ./$build_dir
 
 # Get the prebuilt libraries and build-script
 mkdir -p $build_dir/external
-
-# @todo We need another mechanism for downloading third-party/external softwares
-svn --force export https://github.com/nnstreamer/nnstreamer-android-resource/trunk/android_api ./$build_dir
 
 rm -f ./$build_dir/external/*.tar.gz ./$build_dir/external/*.tar.xz
 if [[ $enable_tflite == "yes" ]]; then
