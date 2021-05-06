@@ -11,7 +11,7 @@ endif
 
 include $(NNSTREAMER_ROOT)/jni/nnstreamer.mk
 
-FLATBUF_VER := @FLATBUF_VER@
+FLATBUF_VER := 1.12.0
 ifeq ($(FLATBUF_VER),@FLATBUF_VER@)
 $(error 'FLATBUF_VER' is not properly set)
 endif

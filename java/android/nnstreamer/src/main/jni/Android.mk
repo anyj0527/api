@@ -38,22 +38,22 @@ include $(NNSTREAMER_ROOT)/jni/nnstreamer.mk
 NNSTREAMER_API_OPTION := all
 
 # tensorflow-lite (nnstreamer tf-lite subplugin)
-ENABLE_TF_LITE := false
+ENABLE_TF_LITE := true
 
 # SNAP (Samsung Neural Acceleration Platform)
 ENABLE_SNAP := false
 
 # NNFW (On-device neural network inference framework, Samsung Research)
-ENABLE_NNFW := false
+ENABLE_NNFW := true
 
 # SNPE (Snapdragon Neural Processing Engine)
-ENABLE_SNPE := false
+ENABLE_SNPE := true
 
 # PyTorch
-ENABLE_PYTORCH := false
+ENABLE_PYTORCH := true
 
 # Converter/decoder sub-plugin for flatbuffers support
-ENABLE_FLATBUF := false
+ENABLE_FLATBUF := true
 
 # MQTT (paho.mqtt.c) support
 ENABLE_MQTT := false

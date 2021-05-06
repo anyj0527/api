@@ -1,3 +1,17 @@
+.vscode/
+android_lib/
+build/
+build*/
+external/
+include/
+lib/
+tflite-libs/
+.idea/
+.gradle
+.externalNative*
+tensorflow-lite
+freedesktop
+
 # Prerequisites
 *.d
 
