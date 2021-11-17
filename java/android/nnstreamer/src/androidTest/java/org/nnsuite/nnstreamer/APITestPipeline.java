@@ -5,6 +5,7 @@ import android.support.test.rule.GrantPermissionRule;
 import android.support.test.runner.AndroidJUnit4;
 import android.view.Surface;
 import android.view.SurfaceView;
+import android.util.Log;
 
 import org.junit.Before;
 import org.junit.Ignore;
@@ -2224,6 +2225,7 @@ public class APITestPipeline {
         }
     }
 
+    @Ignore("disable flatbuf test")
     @Test
     public void testFlatbuf() {
         /* This test assume that the NNStreamer library is built with Flatbuf (default option) */
@@ -2311,6 +2313,225 @@ public class APITestPipeline {
             /* check received data from sink */
             assertFalse(mInvalidState);
             assertEquals(10, mReceived);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    public void testTensorQuery() {
+
+        // Log.w("NNS", "networkaddress.cache.ttl: " + java.security.Security.getProperty("networkaddress.cache.ttl"));
+        // Log.w("NNS", "networkaddress.cache.negative.ttl: " + java.security.Security.getProperty("networkaddress.cache.negative.ttl"));
+
+        // java.security.Security.setProperty("networkaddress.cache.ttl", "0");
+        // java.security.Security.setProperty("networkaddress.cache.negative.ttl", "0");
+
+        // Log.w("NNS", "networkaddress.cache.ttl: " + java.security.Security.getProperty("networkaddress.cache.ttl"));
+        // Log.w("NNS", "networkaddress.cache.negative.ttl: " + java.security.Security.getProperty("networkaddress.cache.negative.ttl"));
+
+
+        String server_desc = "tensor_query_serversrc  ! " +
+                "other/tensors,num_tensors=1,dimensions=3:20:20:1,types=uint8,format=static,framerate=2/1 ! " +
+                "tensor_query_serversink async=false sync=false";
+
+        String client_desc = "videotestsrc is-live=true ! videoconvert ! videoscale ! video/x-raw,width=20,height=20,format=RGB,framerate=2/1 ! " +
+                "tensor_converter ! other/tensors,num_tensors=1,dimensions=3:20:20:1,types=uint8,format=static ! " +
+                "tensor_query_client ! " +
+                "tensor_sink name=sinkx sync=false async=false";
+
+        // Thread server_thread = new Thread(new Runnable() {
+        //     String server_desc = "tensor_query_serversrc host=localhost port=4953 ! " +
+        //     "other/tensors,num_tensors=1,dimensions=3:20:20:1,types=uint8,format=static,framerate=2/1 ! " +
+        //     "tensor_query_serversink host=localhost port=4954 async=false sync=true";
+
+        //     @Override
+        //     public void run() {
+        //         try {
+        //             /* open server_pipe */
+        //             Log.w("nnstreamer", "make server_pipe");
+        //             Pipeline server_pipe = new Pipeline(server_desc);
+        //             /* start server */
+        //             Log.w("nnstreamer", "start server pipeline");
+        //             Thread.sleep(10);
+        //             server_pipe.start();
+        //             Thread.sleep(1000);
+        //             Log.w("nnstreamer", "server_pipe.getState(): " + server_pipe.getState());
+
+
+        //         } catch (Exception e) {
+        //             e.printStackTrace();
+        //         }
+        //     }
+        // });
+
+
+        // Thread client_thread = new Thread(new Runnable() {
+        //     String client_desc = "videotestsrc is-live=true ! videoconvert ! videoscale ! video/x-raw,width=20,height=20,format=RGB,framerate=2/1 ! " +
+        //     "tensor_converter ! other/tensors,num_tensors=1,dimensions=3:20:20:1,types=uint8,format=static ! " +
+        //     "tensor_query_client src-host=localhost src-port=4953 sink-host=localhost sink-port=4954 ! " +
+        //     "tensor_sink name=sinkx sync=false async=false";
+
+        //     @Override
+        //     public void run() {
+        //         try {
+        //             /* open client_pipe */
+        //             Log.w("nnstreamer", "make client_pipe");
+        //             Pipeline client_pipe = new Pipeline(client_desc);
+
+        //             /* register sink callback */
+        //             client_pipe.registerSinkCallback("sinkx", new Pipeline.NewDataCallback() {
+        //                 @Override
+        //                 public void onNewDataReceived(TensorsData data) {
+        //                     if (data == null || data.getTensorsCount() != 1) {
+        //                         mInvalidState = true;
+        //                         return;
+        //                     }
+
+        //                     Log.w("nnstreamer", "mReceived++");
+        //                     mReceived++;
+        //                 }
+        //             });
+
+        //             /* start client */
+        //             Thread.sleep(500);
+        //             Log.w("nnstreamer", "start client pipelines");
+        //             client_pipe.start();
+        //             Thread.sleep(5000);
+        //         } catch (Exception e) {
+        //             e.printStackTrace();
+        //         }
+        //     }
+        // });
+
+        try {
+            /* open server_pipe */
+            Log.w("nnstreamer", "make server_pipe");
+            Pipeline server_pipe = new Pipeline(server_desc);
+            /* start server */
+            Log.w("nnstreamer", "start server pipeline");
+//            Thread.sleep(10);
+            server_pipe.start();
+//            Thread.sleep(1000);
+            Log.w("nnstreamer", "server_pipe.getState(): " + server_pipe.getState());
+
+
+            /* open client_pipe */
+            Log.w("nnstreamer", "make client_pipe");
+            Pipeline client_pipe = new Pipeline(client_desc);
+
+            /* register sink callback */
+            client_pipe.registerSinkCallback("sinkx", new Pipeline.NewDataCallback() {
+                @Override
+                public void onNewDataReceived(TensorsData data) {
+                    if (data == null || data.getTensorsCount() != 1) {
+                        mInvalidState = true;
+                        return;
+                    }
+
+                    Log.w("nnstreamer", "mReceived++");
+                    mReceived++;
+                }
+            });
+
+
+            /* start client */
+            Log.w("nnstreamer", "start client pipelines");
+            client_pipe.start();
+            Thread.sleep(5000);
+            Log.w("nnstreamer", "client_pipe.getState(): " + client_pipe.getState());
+
+            /* stop client */
+            Log.w("nnstreamer", "stop client pipelines");
+            client_pipe.stop();
+            Thread.sleep(10);
+            Log.w("nnstreamer", "client_pipe.getState(): " + client_pipe.getState());
+
+
+
+
+            /* stop server */
+            Log.w("nnstreamer", "stop server pipelines");
+            server_pipe.stop();
+            Thread.sleep(10);
+            Log.w("nnstreamer", "server_pipe.getState(): " + server_pipe.getState());
+
+
+            /* check received data from sink */
+            assertFalse(mInvalidState);
+            assertEquals(10, mReceived);
+            // server_thread.start();
+            // client_thread.start();
+            // Thread.sleep(15000);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    public void testTCPserverclient() {
+        String server_desc = "tcpclientsrc host=localhost name=serversrc port=5001 ! gdpdepay ! " +
+                "other/tensors,num_tensors=1,dimensions=3:20:20:1,types=uint8 ! queue ! " +
+                "tensor_sink name=sinkx";
+
+        String client_desc = "videotestsrc ! videoconvert ! videoscale ! video/x-raw,width=20,height=20,format=RGB,framerate=2/1 ! " +
+                "tensor_converter ! other/tensors,num_tensors=1,dimensions=3:20:20:1,types=uint8 ! gdppay ! tcpserversink host=localhost port=5001";
+
+        try {
+            /* open client_pipe */
+            Log.w("nnstreamer", "make client_pipe");
+            Pipeline client_pipe = new Pipeline(client_desc);
+            Thread.sleep(10);
+            Log.w("nnstreamer", "client_pipe.getState(): " + client_pipe.getState());
+
+
+
+            /* start client */
+            Log.w("nnstreamer", "start client pipelines");
+            client_pipe.start();
+            Thread.sleep(10);
+            Log.w("nnstreamer", "client_pipe.getState(): " + client_pipe.getState());
+
+            /* open server_pipe */
+            Log.w("nnstreamer", "make server_pipe");
+            Pipeline server_pipe = new Pipeline(server_desc);
+            /* register sink callback */
+            server_pipe.registerSinkCallback("sinkx", new Pipeline.NewDataCallback() {
+                @Override
+                public void onNewDataReceived(TensorsData data) {
+                    if (data == null || data.getTensorsCount() != 1) {
+                        mInvalidState = true;
+                        return;
+                    }
+
+                    Log.w("nnstreamer", "mReceived++");
+                    mReceived++;
+                }
+            });
+            /* start server */
+            Log.w("nnstreamer", "start server pipeline");
+            server_pipe.start();
+            Thread.sleep(5000);
+            Log.w("nnstreamer", "server_pipe.getState(): " + server_pipe.getState());
+
+            /* stop server */
+            Log.w("nnstreamer", "stop server pipelines");
+            server_pipe.stop();
+            // Thread.sleep(10);
+            // Log.w("nnstreamer", "server_pipe.getState(): " + server_pipe.getState());
+
+            /* stop client */
+            Log.w("nnstreamer", "stop client pipelines");
+            client_pipe.stop();
+            // Thread.sleep(10);
+            // Log.w("nnstreamer", "client_pipe.getState(): " + client_pipe.getState());
+
+
+
+            /* check received data from sink */
+            assertFalse(mInvalidState);
+            assertEquals(10, mReceived);
+
         } catch (Exception e) {
             fail();
         }

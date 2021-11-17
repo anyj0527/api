@@ -637,7 +637,7 @@ if [[ $enable_tracing == "yes" ]]; then
 fi
 
 # Remove build directory
-rm -rf $build_dir
+# rm -rf $build_dir
 
 popd
 cd ${nnstreamer_dir} && find -name nnstreamer_version.h -delete
