@@ -28,6 +28,8 @@
 #include "ml-api-internal.h"
 
 
+static GMainLoop *loop;
+
 #define handle_init(name, h) \
   ml_pipeline_common_elem *name= (h); \
   ml_pipeline *p; \
@@ -1124,6 +1126,8 @@ ml_pipeline_start (ml_pipeline_h pipe)
 
   check_feature_state ();
 
+  loop = g_main_loop_new (NULL, FALSE);
+
   if (p == NULL)
     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
         "The parameter, pipe, is NULL. It should be a valid ml_pipeline_h handle, which is usually created by ml_pipeline_construct ().");
@@ -1159,6 +1163,10 @@ ml_pipeline_start (ml_pipeline_h pipe)
 
 done:
   g_mutex_unlock (&p->lock);
+
+  // ml_logw ("g_main_loop_run on pipe.start()~~~~~");
+  // g_main_loop_run (loop);
+  // ml_logw ("g_main_loop_finished");
   return status;
 }
 
