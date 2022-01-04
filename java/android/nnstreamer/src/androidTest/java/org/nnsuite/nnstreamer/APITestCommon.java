@@ -74,6 +74,21 @@ public class APITestCommon {
     }
 
     /**
+     * Gets the File object of tensorflow-lite model.
+     * Note that, to invoke model in the storage, the permission READ_EXTERNAL_STORAGE is required.
+     */
+    public static File getTFLiteYolov5sModel() {
+        String root = Environment.getExternalStorageDirectory().getAbsolutePath();
+        File model = new File(root + "/nnstreamer/tflite_model/yolov5s-fp16-320.tflite");
+
+        if (!model.exists()) {
+            fail();
+        }
+
+        return model;
+    }
+
+    /**
      * Reads raw image file (orange) and returns TensorsData instance.
      */
     public static TensorsData readRawImageData() {

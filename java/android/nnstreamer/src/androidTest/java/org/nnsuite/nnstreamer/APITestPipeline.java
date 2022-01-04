@@ -728,6 +728,55 @@ public class APITestPipeline {
     }
 
     @Test
+    public void testYolov5TFLite() {
+        if (!NNStreamer.isAvailable(NNStreamer.NNFWType.TENSORFLOW_LITE)) {
+            /* cannot run the test */
+            return;
+        }
+
+        File model = APITestCommon.getTFLiteYolov5sModel();
+        String desc = "videotestsrc ! videoscale ! videoconvert ! " +
+                "video/x-raw,width=320,height=320,format=RGB ! " +
+                "tensor_converter ! " +
+                "other/tensors,num_tensors=(int)1,dimensions=(string)3:320:320:1,types=(string)uint8,format=(string)static ! " +
+                "tensor_transform mode=arithmetic option=typecast:float32,add:0.0,div:255.0 ! " +
+                "tensor_filter framework=tensorflow-lite model=" + model.getAbsolutePath() + " custom=Delegate:GPU,NumThreads:1 latency=1 ! " +
+                "other/tensors,num_tensors=(int)1,types=(string)float32,dimensions=(string)85:25200:1:1 ! " +
+                "tensor_sink name=sinkx";
+
+        try (Pipeline pipe = new Pipeline(desc)) {
+            /* register sink callback */
+            pipe.registerSinkCallback("sinkx", new Pipeline.NewDataCallback() {
+                @Override
+                public void onNewDataReceived(TensorsData data) {
+                    if (data == null || data.getTensorsCount() != 1) {
+                        mInvalidState = true;
+                        return;
+                    }
+
+                    mReceived++;
+                }
+            });
+
+            /* start pipeline */
+            pipe.start();
+
+            /* sleep 1000 to invoke */
+            Thread.sleep(10000);
+
+            /* stop pipeline */
+            pipe.stop();
+
+            /* check received data from sink */
+            assertFalse(mInvalidState);
+            assertTrue(mReceived > 0);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+
+    @Test
     public void testInputBuffer() {
         String desc = "appsrc name=srcx ! " +
                 "other/tensor,dimension=(string)2:10:10:1,type=(string)uint8,framerate=(fraction)0/1 ! " +
