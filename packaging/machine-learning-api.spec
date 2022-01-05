@@ -14,7 +14,7 @@
 %define		nnfw_support 1
 %define		armnn_support 0
 
-%define		release_test 0
+%define		release_test 1
 %define		test_script $(pwd)/packaging/run_unittests.sh
 ###########################################################################
 # Conditional features for Tizen releases
@@ -96,6 +96,7 @@ BuildRequires:	pkgconfig(dlog)
 BuildRequires:	lcov
 %endif
 
+BuildRequires:	gtest-devel
 %if 0%{?unit_test}
 BuildRequires:	gtest-devel
 
@@ -243,7 +244,7 @@ CXXFLAGS=`echo $CXXFLAGS | sed -e "s|-Wp,-D_FORTIFY_SOURCE=[1-9]||g"`
 mkdir -p build
 
 meson --buildtype=plain --prefix=%{_prefix} --sysconfdir=%{_sysconfdir} --libdir=%{_libdir} \
-	--bindir=%{_bindir} --includedir=%{_includedir} %{install_test} %{enable_test_coverage} \
+	--bindir=%{_bindir} --includedir=%{_includedir} -Denable-test=true %{install_test} %{enable_test_coverage} \
 	%{enable_tizen} %{enable_tizen_privilege_check} %{enable_tizen_feature_check} \
 	build
 

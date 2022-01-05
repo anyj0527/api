@@ -11,6 +11,14 @@ unittest_common_dep = declare_dependency(
   include_directories: nns_capi_include,
 )
 
+unittest_capi_inference_snpe = executable('unittest_capi_inference_snpe',
+  'unittest_capi_inference_snpe.cc',
+  dependencies: [unittest_common_dep],
+  install: get_option('install-test'),
+  install_dir: unittest_install_dir
+)
+test('unittest_capi_inference_snpe', unittest_capi_inference_snpe, env: testenv, timeout: 100)
+
 unittest_capi_inference = executable('unittest_capi_inference',
   'unittest_capi_inference.cc',
   dependencies: [unittest_common_dep],
