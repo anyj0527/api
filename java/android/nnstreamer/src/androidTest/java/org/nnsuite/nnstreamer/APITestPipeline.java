@@ -2327,7 +2327,7 @@ public class APITestPipeline {
         }
     }
 
-    @Ignore("Checking available mqtt broker is not ready, please ignore")
+//    @Ignore("Checking available mqtt broker is not ready, please ignore")
     @Test
     public void testMQTTElement() {
         String sub_desc = "mqttsrc sub-topic=test/videotestsrc ! " +
@@ -2336,6 +2336,99 @@ public class APITestPipeline {
         String pub_desc = "videotestsrc is-live=true num-buffers=10 ! " +
                 "video/x-raw,format=RGB,width=40,height=40,framerate=5/1 ! " +
                 "mqttsink pub-topic=test/videotestsrc";
+
+        try {
+            Pipeline sub_pipe = new Pipeline(sub_desc);
+            /* register sink callback */
+            sub_pipe.registerSinkCallback("sinkx", new Pipeline.NewDataCallback() {
+                @Override
+                public void onNewDataReceived(TensorsData data) {
+                    if (data == null || data.getTensorsCount() != 1) {
+                        mInvalidState = true;
+                        return;
+                    }
+                    mReceived++;
+                }
+            });
+            sub_pipe.start();
+
+            Pipeline pub_pipe = new Pipeline(pub_desc);
+            pub_pipe.start();
+
+            Thread.sleep(3000);
+
+            sub_pipe.stop();
+            pub_pipe.stop();
+
+            /* check received data from sink */
+            assertFalse(mInvalidState);
+            assertEquals(10, mReceived);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    public void testMQTTAppsrc() {
+        String sub_desc = "mqttsrc is-live=true sub-topic=test/appsrc ! " +
+                "other/tensor,dimension=(string)3:1920:1080:1,type=(string)uint8,framerate=(fraction)0/1 ! " +
+                "tensor_sink name=sinkx sync=false async=false";
+        String pub_desc = "appsrc name=srcx do-timestamp=true ! " +
+                "other/tensor,dimension=(string)3:1920:1080:1,type=(string)uint8,framerate=(fraction)0/1 ! " +
+                "mqttsink pub-topic=test/appsrc sync=false async=false";
+
+        try {
+            Pipeline sub_pipe = new Pipeline(sub_desc);
+            /* register sink callback */
+            sub_pipe.registerSinkCallback("sinkx", new Pipeline.NewDataCallback() {
+                @Override
+                public void onNewDataReceived(TensorsData data) {
+                    if (data == null || data.getTensorsCount() != 1) {
+                        mInvalidState = true;
+                        return;
+                    }
+                    Log.i ("NNSTREAMER", "Got a buffer from mqttsrc!");
+                    mReceived++;
+                }
+            });
+            sub_pipe.start();
+
+            Pipeline pub_pipe = new Pipeline(pub_desc);
+            pub_pipe.start();
+
+            for (int i = 0; i < 10; ++i) {
+//                TensorsData in = APITestCommon.readRawImageData();
+                TensorsInfo info = new TensorsInfo();
+                info.addTensorInfo(NNStreamer.TensorType.UINT8, new int[]{3,1920,1080,1});
+                TensorsData in = info.allocate();
+                Log.i ("nnstreamer", "PUSHPUSHPUSH " + i + " times");
+                pub_pipe.inputData("srcx", in);
+                Thread.sleep(2000);
+            }
+
+            Thread.sleep(33);
+
+            sub_pipe.stop();
+            pub_pipe.stop();
+
+            /* check received data from sink */
+            assertFalse(mInvalidState);
+            assertEquals(10, mReceived);
+        } catch (Exception e) {
+            fail();
+        }
+    }
+
+    @Test
+    public void testMQTTFilesrc() {
+        String root = Environment.getExternalStorageDirectory().getAbsolutePath();
+        String png_path = root + "/nnstreamer/test/orange.png";
+        String sub_desc = "mqttsrc sub-topic=test/orange ! " +
+                "video/x-raw,format=RGB,width=224,height=224,framerate=0/1 ! " +
+                "tensor_converter ! tensor_sink name=sinkx";
+        String pub_desc = "filesrc location= " + png_path + " ! pngdec ! videoconvert ! videoscale ! video/x-raw,format=RGB,width=224,height=224 ! imagefreeze ! " +
+                "video/x-raw,format=RGB,width=224,height=224,framerate=5/1 ! " +
+                "mqttsink pub-topic=test/orange";
 
         try {
             Pipeline sub_pipe = new Pipeline(sub_desc);

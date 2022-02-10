@@ -44,19 +44,19 @@ ENABLE_TF_LITE := true
 ENABLE_SNAP := false
 
 # NNFW (On-device neural network inference framework, Samsung Research)
-ENABLE_NNFW := true
+ENABLE_NNFW := false
 
 # SNPE (Snapdragon Neural Processing Engine)
-ENABLE_SNPE := true
+ENABLE_SNPE := false
 
 # PyTorch
-ENABLE_PYTORCH := true
+ENABLE_PYTORCH := false
 
 # Converter/decoder sub-plugin for flatbuffers support
-ENABLE_FLATBUF := true
+ENABLE_FLATBUF := false
 
 # MQTT (paho.mqtt.c) support
-ENABLE_MQTT := false
+ENABLE_MQTT := true
 
 ifeq ($(ENABLE_SNAP),true)
 ifeq ($(ENABLE_SNPE),true)
