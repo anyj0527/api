@@ -78,6 +78,12 @@ if get_option('default_library') == 'static'
     ml_agentd_lib = ml_agentd_static_lib
 endif
 
+lib_ml_agentd_dep = declare_dependency(
+  dependencies: ml_agentd_deps,
+  include_directories: ml_agentd_incs,
+  link_with: ml_agentd_lib,
+)
+
 ml_agentd_lib_common_objs = ml_agentd_shared_lib.extract_objects(ml_agentd_lib_common_srcs)
 ml_agentd_test_both_lib = both_libraries('ml-agentd-test',
   ml_agentd_lib_service_db_srcs,
@@ -148,3 +154,30 @@ configure_file(input: 'ml-agentd.pc.in', output: 'ml-agentd.pc',
   install_dir: join_paths(api_install_libdir, 'pkgconfig'),
   configuration: ml_agentd_conf
 )
+
+## Plugin Parser
+if (get_option('enable-tizen'))
+  plugin_parser_install_path = join_paths(get_option('sysconfdir'), 'package-manager', 'parserlib', 'metadata') # /etc/package-manager/parserlib/metadata/
+
+  ml_plugin_parser_deps = [
+    # glib_dep,
+    # sqlite_dep,
+    lib_ml_agentd_dep,
+    dependency('libxml-2.0'),
+    # dependency('dlog')
+  ]
+
+  ml_plugin_parser_srcs = files('plugin-parser.cc')
+  ml_plugin_parser_shared_lib = shared_library ('ml-agent-plugin-parser',
+    ml_plugin_parser_srcs,
+    dependencies: ml_plugin_parser_deps,
+    include_directories: include_directories('.'),
+    cpp_args: [daemon_cpp_db_path_arg, daemon_cpp_db_key_prefix_arg],
+    install: true,
+    install_dir: plugin_parser_install_path,
+  )
+
+  info_file_install_path = join_paths(api_install_prefix, 'share', 'parser-plugins') # /usr/share/parser-plugins/
+  install_data(files('ml-agent-plugin-parser.info'), install_dir: info_file_install_path)
+
+endif

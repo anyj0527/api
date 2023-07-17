@@ -160,6 +160,12 @@ BuildRequires:  pkgconfig(json-glib-1.0)
 BuildRequires:  dbus
 BuildRequires:  pkgconfig(capi-appfw-package-manager)
 BuildRequires:	pkgconfig(capi-appfw-app-common)
+
+BuildRequires:	pkgconfig(libxml-2.0)
+# BuildRequires: pkgconfig(libxml-2.0)
+# BuildRequires: pkgconfig(pkgmgr-installer)
+# BuildRequires: pkgconfig(pkgmgr-info)
+# BuildRequires: pkgconfig(pkgmgr)
 %endif
 
 %description
@@ -498,6 +504,8 @@ install -m 0755 packaging/run-unittest.sh %{buildroot}%{_bindir}/tizen-unittests
 %files -n libmachine-learning-agent
 %manifest machine-learning-agent.manifest
 %{_libdir}/libml-agentd.so.*
+%{_sysconfdir}/package-manager/parserlib/metadata/*
+%{_datadir}/parser-plugins/ml-agent-plugin-parser.info
 
 %files -n libmachine-learning-agent-devel
 %manifest machine-learning-agent.manifest
