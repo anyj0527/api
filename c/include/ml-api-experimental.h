@@ -12,12 +12,17 @@
 #ifndef __ML_API_EXPERIMENTAL_H__
 #define __ML_API_EXPERIMENTAL_H__
 
-#include <nnstreamer.h>
+#include <ml-api-common.h>
 #include <nnstreamer-single.h>
+#include <nnstreamer.h>
 #include <ml-api-service.h>
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+/****************************************************
+ ** ML API Common                                  **
+ ****************************************************/
 
 /**
  * @brief Gets the version number of machine-learning API. (major.minor.micro)
@@ -35,6 +40,44 @@ void ml_api_get_version (unsigned int *major, unsigned int *minor, unsigned int 
  */
 char * ml_api_get_version_string (void);
 
+/**
+ * @brief Copies the tensor data frame.
+ * @since_tizen 8.0
+ * @param[in] in The handle of tensors data to be cloned.
+ * @param[out] out The handle of tensors data. The caller is responsible for freeing the allocated data with ml_tensors_data_destroy().
+ * @return @c 0 on success. Otherwise a negative error value.
+ * @retval #ML_ERROR_NONE Successful.
+ * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
+ * @retval #ML_ERROR_INVALID_PARAMETER Given parameter is invalid.
+ * @retval #ML_ERROR_OUT_OF_MEMORY Failed to allocate required memory.
+ * @todo Consider adding new API from tizen 8.0.
+ */
+int ml_tensors_data_clone (const ml_tensors_data_h in, ml_tensors_data_h *out);
+
+/**
+ * @brief Get the tensors_info handle from the given tensors_data handle.
+ * @since_tizen 9.0
+ * @remarks The @a info should be destroyed using ml_tensors_info_destroy().
+ * @param[in] data The tensors_data handle.
+ * @param[out] info The tensors_info handle.
+ * @return 0 on success. Otherwise a negative error value.
+ * @retval #ML_ERROR_NONE Successful.
+ * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
+ * @retval #ML_ERROR_INVALID_PARAMETER Fail. The parameter is invalid.
+ */
+int ml_tensors_data_get_tensors_info (ml_tensors_data_h data, const ml_tensors_info_h *info);
+
+/****************************************************
+ ** ML API Single                                  **
+ ****************************************************/
+
+/****************************************************
+ ** ML API Pipeline                                **
+ ****************************************************/
+
+/****************************************************
+ ** ML Service APIs                                **
+ ****************************************************/
 
 typedef enum {
   ML_SERVICE_TYPE_UNKNOWN = 0,

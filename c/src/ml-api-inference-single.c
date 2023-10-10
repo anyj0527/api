@@ -22,6 +22,7 @@
 #include "ml-api-inference-internal.h"
 #include "ml-api-internal.h"
 #include "ml-api-inference-single-internal.h"
+#include "ml-api-experimental.h"
 
 #define ML_SINGLE_MAGIC 0xfeedfeed
 

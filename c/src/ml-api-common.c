@@ -1171,6 +1171,42 @@ failed_oom:
 }
 
 /**
+ * @brief Get the tensors_info handle from the given tensors_data handle.
+ */
+int
+ml_tensors_data_get_tensors_info (ml_tensors_data_h data,
+    const ml_tensors_info_h * info)
+{
+  // ml_tensors_info_s *_info;
+  ml_tensors_data_s *_data;
+  int status = ML_ERROR_NONE;
+
+  check_feature_state (ML_FEATURE);
+
+  if (data == NULL)
+    _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+        "The parameter, data, is NULL. It should be a valid ml_tensors_data_h handle, which is usually created by ml_tensors_data_create ().");
+
+  if (info == NULL)
+    _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+        "The parameter, data, is NULL. It should be a valid space to hold a ml_tensors_data_h handle. E.g., ml_tensors_info_h info; ml_tensors_data_get_tensors_info (data, &info);.");
+
+  _data = (ml_tensors_data_s *) data;
+  G_LOCK_UNLESS_NOLOCK (*_data);
+
+  // status = ml_tensors_info_clone (info, _data->info);
+  // if (status != ML_ERROR_NONE)
+  //   _ml_error_report_return_continue (status,
+  //       "Failed to clone the tensors_info of given tensors_data with ml_tensors_info_clone ().");
+
+  // return the pointer as const handle.
+  info = (const ml_tensors_info_h *) _data->info;
+
+  G_UNLOCK_UNLESS_NOLOCK (*_data);
+  return status;
+}
+
+/**
  * @brief Gets a tensor data of given handle.
  */
 int

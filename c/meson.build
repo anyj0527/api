@@ -80,12 +80,12 @@ install_headers(nns_capi_headers,
   subdir: 'nnstreamer'
 )
 
+install_headers(nns_capi_experimental_headers,
+  subdir: 'nnstreamer'
+)
+
 if get_option('enable-ml-service')
   install_headers(nns_capi_service_headers,
-    subdir: 'nnstreamer'
-  )
-
-  install_headers(nns_capi_experimental_headers,
     subdir: 'nnstreamer'
   )
 endif
