@@ -11,7 +11,7 @@ endif
 
 nns_capi_single_srcs = files('ml-api-inference-single.c')
 nns_capi_pipeline_srcs = files('ml-api-inference-pipeline.c')
-nns_capi_service_srcs = files('ml-api-service-common.c','ml-api-service-agent-client.c', 'ml-api-service-query-client.c')
+nns_capi_service_srcs = files('ml-api-service.c','ml-api-service-agent-client.c', 'ml-api-service-query-client.c', 'ml-api-service-extension.c')
 
 # Build ML-API Common Lib First.
 nns_capi_common_shared_lib = shared_library ('capi-ml-common',

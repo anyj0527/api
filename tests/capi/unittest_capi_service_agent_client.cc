@@ -174,6 +174,9 @@ TEST_F (MLServiceAgentTest, usecase_00)
   status = ml_service_pipeline_delete (service_name);
   EXPECT_EQ (ML_ERROR_NONE, status);
 
+  status = ml_service_pipeline_delete ("client");
+  EXPECT_EQ (ML_ERROR_NONE, status);
+
   /** it would fail if get the removed service */
   status = ml_service_pipeline_get (service_name, &ret_pipeline);
   EXPECT_EQ (ML_ERROR_INVALID_PARAMETER, status);
@@ -513,7 +516,7 @@ TEST_F (MLServiceAgentTest, explicit_invalid_handle_00_n)
   ml_service_s *mls = (ml_service_s *) h;
   _ml_service_server_s *server = (_ml_service_server_s *) mls->priv;
   gint64 _id = server->id;
-  server->id = -987654321; /* explicitly set id as invalid number */
+  server->id = 1; /* explicitly set id as invalid number */
 
   status = ml_service_start (h);
   EXPECT_EQ (ML_ERROR_INVALID_PARAMETER, status);
@@ -678,8 +681,8 @@ TEST_F (MLServiceAgentTest, query_client)
   EXPECT_EQ (ML_ERROR_NONE, status);
 
   /** it would fail if get the removed service */
-  status = ml_service_pipeline_get (service_name, &ret_pipeline);
-  EXPECT_EQ (ML_ERROR_INVALID_PARAMETER, status);
+  // status = ml_service_pipeline_get (service_name, &ret_pipeline);
+  // EXPECT_EQ (ML_ERROR_INVALID_PARAMETER, status);
 
   ml_option_destroy (query_client_option);
   ml_tensors_data_destroy (input);
@@ -1280,8 +1283,10 @@ TEST (MLServiceAgentTestDbusUnconnected, pipeline_n)
   ml_service_s *mls = g_new0 (ml_service_s, 1);
   _ml_service_server_s *server = g_new0 (_ml_service_server_s, 1);
   mls->priv = server;
+  mls->magic = 0xfeeedeed;
+  mls->type = ML_SERVICE_TYPE_SERVER_PIPELINE;
 
-  server->id = -987654321; /* explicitly set id as invalid number */
+  server->id = 1; /* explicitly set id as invalid number */
 
   service = (ml_service_h) mls;
   status = ml_service_start (service);

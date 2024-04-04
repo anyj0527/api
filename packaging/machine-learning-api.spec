@@ -392,6 +392,7 @@ bash %{test_script} ./tests/capi/unittest_capi_datatype_consistency
 bash %{test_script} ./tests/daemon/unittest_ml_agent
 bash %{test_script} ./tests/daemon/unittest_service_db
 bash %{test_script} ./tests/daemon/unittest_gdbus_util
+bash %{test_script} ./tests/capi/unittest_capi_service_extension
 bash %{test_script} ./tests/capi/unittest_capi_service_agent_client
 %endif
 

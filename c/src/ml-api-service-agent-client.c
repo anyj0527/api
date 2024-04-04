@@ -259,7 +259,7 @@ ml_service_pipeline_delete (const char *name)
  * @brief Launch the pipeline of given service.
  */
 int
-ml_service_pipeline_launch (const char *name, ml_service_h * h)
+ml_service_pipeline_launch (const char *name, ml_service_h * handle)
 {
   int ret = ML_ERROR_NONE;
   GError *err = NULL;
@@ -268,28 +268,27 @@ ml_service_pipeline_launch (const char *name, ml_service_h * h)
 
   check_feature_state (ML_FEATURE_SERVICE);
 
-  if (h == NULL) {
+  if (handle == NULL) {
     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
-        "The argument for 'h' should not be NULL");
+        "The argument for 'handle' should not be NULL.");
   }
 
-  if (*h != NULL) {
-    _ml_logw (WARN_MSG_DPTR_SET_OVER, "ml_service_h *h = NULL");
+  if (*handle != NULL) {
+    _ml_logw (WARN_MSG_DPTR_SET_OVER, "ml_service_h *handle = NULL");
   }
-  *h = NULL;
+  *handle = NULL;
 
-  mls = g_try_new0 (ml_service_s, 1);
+  mls = _ml_service_create_internal (ML_SERVICE_TYPE_SERVER_PIPELINE);
   if (mls == NULL) {
     _ml_error_report_return (ML_ERROR_OUT_OF_MEMORY,
         "Failed to allocate memory for the service handle. Out of memory?");
   }
 
-  server = g_try_new0 (_ml_service_server_s, 1);
+  mls->priv = server = g_try_new0 (_ml_service_server_s, 1);
   if (server == NULL) {
-    g_free (mls);
+    _ml_service_destroy_internal (mls);
     _ml_error_report_return (ML_ERROR_OUT_OF_MEMORY,
-        "Failed to allocate memory for the service handle's private data. "
-        "Out of memory?");
+        "Failed to allocate memory for the service handle's private data. Out of memory?");
   }
 
   ret = ml_agent_dbus_interface_pipeline_launch (name, &(server->id), &err);
@@ -303,72 +302,70 @@ ml_service_pipeline_launch (const char *name, ml_service_h * h)
   }
 
   server->service_name = g_strdup (name);
-  mls->type = ML_SERVICE_TYPE_SERVER_PIPELINE;
-  mls->priv = server;
-  *h = mls;
+  *handle = mls;
 
   return ML_ERROR_NONE;
 }
 
-/**
- * @brief Start the pipeline of given ml_service_h
- */
-int
-ml_service_start (ml_service_h h)
-{
-  int ret = ML_ERROR_NONE;
-  ml_service_s *mls;
-  _ml_service_server_s *server;
-  GError *err = NULL;
+// /**
+//  * @brief Start the pipeline of given ml_service_h
+//  */
+// int
+// ml_service_start (ml_service_h h)
+// {
+//   int ret = ML_ERROR_NONE;
+//   ml_service_s *mls;
+//   _ml_service_server_s *server;
+//   GError *err = NULL;
 
-  check_feature_state (ML_FEATURE_SERVICE);
+//   check_feature_state (ML_FEATURE_SERVICE);
 
-  if (!h) {
-    _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
-        "The parameter, 'h' is NULL. It should be a valid ml_service_h");
-  }
+//   if (!h) {
+//     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+//         "The parameter, 'h' is NULL. It should be a valid ml_service_h");
+//   }
 
-  mls = (ml_service_s *) h;
-  server = (_ml_service_server_s *) mls->priv;
-  ret = ml_agent_dbus_interface_pipeline_start (server->id, &err);
-  if (ret < 0) {
-    _ml_error_report ("Failed to invoke the method start_pipeline (%s).",
-        err ? err->message : "Unknown error");
-  }
-  g_clear_error (&err);
+//   mls = (ml_service_s *) h;
+//   server = (_ml_service_server_s *) mls->priv;
+//   ret = ml_agent_dbus_interface_pipeline_start (server->id, &err);
+//   if (ret < 0) {
+//     _ml_error_report ("Failed to invoke the method start_pipeline (%s).",
+//         err ? err->message : "Unknown error");
+//   }
+//   g_clear_error (&err);
 
-  return ret;
-}
+//   return ret;
+// }
 
-/**
- * @brief Stop the pipeline of given ml_service_h
- */
-int
-ml_service_stop (ml_service_h h)
-{
-  int ret = ML_ERROR_NONE;
-  GError *err = NULL;
-  ml_service_s *mls;
-  _ml_service_server_s *server;
+// /**
+//  * @brief Stop the pipeline of given ml_service_h
+//  */
+// int
+// ml_service_stop (ml_service_h h)
+// {
+//   int ret = ML_ERROR_NONE;
+//   GError *err = NULL;
+//   ml_service_s *mls;
+//   _ml_service_server_s *server;
 
-  check_feature_state (ML_FEATURE_SERVICE);
+//   check_feature_state (ML_FEATURE_SERVICE);
 
-  if (!h) {
-    _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
-        "The parameter, 'h' is NULL. It should be a valid ml_service_h");
-  }
+//   if (!h) {
+//     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+//         "The parameter, 'h' is NULL. It should be a valid ml_service_h");
+//   }
 
-  mls = (ml_service_s *) h;
-  server = (_ml_service_server_s *) mls->priv;
-  ret = ml_agent_dbus_interface_pipeline_stop (server->id, &err);
-  if (ret < 0) {
-    _ml_error_report ("Failed to invoke the method stop_pipeline (%s).",
-        err ? err->message : "Unknown error");
-  }
-  g_clear_error (&err);
+//   mls = (ml_service_s *) h;
+//   server = (_ml_service_server_s *) mls->priv;
+//   ret = ml_agent_dbus_interface_pipeline_stop (server->id, &err);
+//   if (ret < 0) {
+//     _ml_error_report ("Failed to invoke the method stop_pipeline (%s).",
+//         err ? err->message : "Unknown error");
+//   }
+//   g_clear_error (&err);
 
-  return ret;
-}
+//   return ret;
+// }
 
 /**
  * @brief Return state of given ml_service_h
@@ -405,6 +402,37 @@ ml_service_pipeline_get_state (ml_service_h h, ml_pipeline_state_e * state)
 
   *state = (ml_pipeline_state_e) _state;
   return ret;
+}
+
+/**
+ * @brief Internal function to release ml-service pipeline data.
+ */
+int
+ml_service_pipeline_release_internal (ml_service_s * mls)
+{
+  _ml_service_server_s *server = (_ml_service_server_s *) mls->priv;
+  int ret;
+  GError *err = NULL;
+
+  /* Supposed internal function call to release handle. */
+  if (!server)
+    return ML_ERROR_NONE;
+
+  if (server->id > 0) {
+    ret = ml_agent_dbus_interface_pipeline_destroy (server->id, &err);
+    if (ret < 0) {
+      _ml_error_report_return (ret,
+          "Failed to invoke the method destroy_pipeline (%s).",
+        err ? err->message : "Unknown error");
+    }
+  }
+  g_clear_error (&err);
+
+  g_free (server->service_name);
+  g_free (server);
+  mls->priv = NULL;
+
+  return ML_ERROR_NONE;
 }
 
 /**

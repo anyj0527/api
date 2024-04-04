@@ -21,6 +21,41 @@
 #include "ml-api-service-private.h"
 
 /**
+ * @brief Structure for ml_service_query
+ */
+typedef struct
+{
+  ml_pipeline_h pipe_h;
+  ml_pipeline_src_h src_h;
+  ml_pipeline_sink_h sink_h;
+
+  guint timeout; /**< in ms unit */
+  GAsyncQueue *out_data_queue;
+} _ml_service_query_s;
+
+/* SPDX-License-Identifier: Apache-2.0 */
+/**
+ * Copyright (c) 2022 Samsung Electronics Co., Ltd. All Rights Reserved.
+ *
+ * @file ml-api-service-query-client.c
+ * @date 30 Aug 2022
+ * @brief Query client implementation of NNStreamer/Service C-API
+ * @see https://github.com/nnstreamer/nnstreamer
+ * @author Yongjoo Ahn <yongjoo1.ahn@samsung.com>
+ * @bug No known bugs except for NYI items
+ */
+
+#include <glib.h>
+#include <gst/gst.h>
+#include <gst/gstbuffer.h>
+#include <gst/app/app.h>
+#include <string.h>
+
+#include "ml-api-internal.h"
+#include "ml-api-service.h"
+#include "ml-api-service-private.h"
+
+/**
  * @brief Sink callback for query_client
  */
 static void
@@ -59,22 +94,49 @@ _sink_callback_for_query_client (const ml_tensors_data_h data,
 }
 
 /**
+ * @brief Internal function to release ml-service query data.
+ */
+int
+ml_service_query_release_internal (ml_service_s * mls)
+{
+  _ml_service_query_s *query = (_ml_service_query_s *) mls->priv;
+  ml_tensors_data_h data_h;
+
+  /* Supposed internal function call to release handle. */
+  if (!query)
+    return ML_ERROR_NONE;
+
+  if (query->pipe_h) {
+    if (ml_pipeline_destroy (query->pipe_h))
+      _ml_error_report ("Failed to destroy pipeline");
+  }
+
+  if (query->out_data_queue) {
+    while ((data_h = g_async_queue_try_pop (query->out_data_queue))) {
+      ml_tensors_data_destroy (data_h);
+    }
+
+    g_async_queue_unref (query->out_data_queue);
+  }
+
+  g_free (query);
+  mls->priv = NULL;
+
+  return ML_ERROR_NONE;
+}
+/**
  * @brief Creates query client service handle with given ml-option handle.
  */
 int
-ml_service_query_create (ml_option_h option, ml_service_h * h)
+ml_service_query_create (ml_option_h option, ml_service_h * handle)
 {
   int status = ML_ERROR_NONE;
 
-  gchar *description = NULL;
-
-  ml_option_s *_option;
-  GHashTableIter iter;
-  gchar *key;
-  ml_option_value_s *_option_value;
+  g_autofree gchar *description = NULL;
+  void *value;
 
   GString *tensor_query_client_prop;
-  gchar *prop = NULL;
+  g_autofree gchar *prop = NULL;
 
   ml_service_s *mls;
 
@@ -82,7 +144,7 @@ ml_service_query_create (ml_option_h option, ml_service_h * h)
   ml_pipeline_h pipe_h;
   ml_pipeline_src_h src_h;
   ml_pipeline_sink_h sink_h;
-  gchar *caps = NULL;
+  g_autofree gchar *caps = NULL;
   guint timeout = 1000U;        /* default 1s timeout */
 
   check_feature_state (ML_FEATURE_SERVICE);
@@ -93,50 +155,61 @@ ml_service_query_create (ml_option_h option, ml_service_h * h)
         "The parameter, 'option' is NULL. It should be a valid ml_option_h, which should be created by ml_option_create().");
   }
 
-  if (!h) {
+  if (!handle) {
     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
-        "The parameter, 'h' (ml_service_h), is NULL. It should be a valid ml_service_h.");
+        "The parameter, 'handle' (ml_service_h), is NULL. It should be a valid ml_service_h.");
   }
 
-  _option = (ml_option_s *) option;
-  g_hash_table_iter_init (&iter, _option->option_table);
+  mls = _ml_service_create_internal (ML_SERVICE_TYPE_CLIENT_QUERY);
+  if (mls == NULL) {
+    _ml_error_report_return (ML_ERROR_OUT_OF_MEMORY,
+        "Failed to allocate memory for the service handle. Out of memory?");
+  }
+
+  mls->priv = query_s = g_try_new0 (_ml_service_query_s, 1);
+  if (query_s == NULL) {
+    _ml_service_destroy_internal (mls);
+    _ml_error_report_return (ML_ERROR_OUT_OF_MEMORY,
+        "Failed to allocate memory for the service handle's private data. Out of memory?");
+  }
+
   tensor_query_client_prop = g_string_new (NULL);
-  while (g_hash_table_iter_next (&iter, (gpointer *) & key,
-          (gpointer *) & _option_value)) {
-    if (0 == g_ascii_strcasecmp (key, "host")) {
-      g_string_append_printf (tensor_query_client_prop, " host=%s ",
-          (gchar *) _option_value->value);
-    } else if (0 == g_ascii_strcasecmp (key, "port")) {
-      g_string_append_printf (tensor_query_client_prop, " port=%u ",
-          *((guint *) _option_value->value));
-    } else if (0 == g_ascii_strcasecmp (key, "dest-host")) {
-      g_string_append_printf (tensor_query_client_prop, " dest-host=%s ",
-          (gchar *) _option_value->value);
-    } else if (0 == g_ascii_strcasecmp (key, "dest-port")) {
-      g_string_append_printf (tensor_query_client_prop, " dest-port=%u ",
-          *((guint *) _option_value->value));
-    } else if (0 == g_ascii_strcasecmp (key, "connect-type")) {
-      g_string_append_printf (tensor_query_client_prop, " connect-type=%s ",
-          (gchar *) _option_value->value);
-    } else if (0 == g_ascii_strcasecmp (key, "topic")) {
-      g_string_append_printf (tensor_query_client_prop, " topic=%s ",
-          (gchar *) _option_value->value);
-    } else if (0 == g_ascii_strcasecmp (key, "timeout")) {
-      g_string_append_printf (tensor_query_client_prop, " timeout=%u ",
-          *((guint *) _option_value->value));
-      timeout = *((guint *) _option_value->value);
-    } else if (0 == g_ascii_strcasecmp (key, "caps")) {
-      caps = g_strdup (_option_value->value);
-    } else {
-      _ml_logw ("Ignore unknown key for ml_option: %s", key);
-    }
-  }
 
-  if (!caps) {
+  if (ML_ERROR_NONE == ml_option_get (option, "host", &value))
+    g_string_append_printf (tensor_query_client_prop, " host=%s ",
+        (gchar *) value);
+
+  if (ML_ERROR_NONE == ml_option_get (option, "port", &value))
+    g_string_append_printf (tensor_query_client_prop, " port=%u ",
+        *((guint *) value));
+
+  if (ML_ERROR_NONE == ml_option_get (option, "dest-host", &value))
+    g_string_append_printf (tensor_query_client_prop, " dest-host=%s ",
+        (gchar *) value);
+
+  if (ML_ERROR_NONE == ml_option_get (option, "dest-port", &value))
+    g_string_append_printf (tensor_query_client_prop, " dest-port=%u ",
+        *((guint *) value));
+
+  if (ML_ERROR_NONE == ml_option_get (option, "connect-type", &value))
+    g_string_append_printf (tensor_query_client_prop, " connect-type=%s ",
+        (gchar *) value);
+
+  if (ML_ERROR_NONE == ml_option_get (option, "topic", &value))
+    g_string_append_printf (tensor_query_client_prop, " topic=%s ",
+        (gchar *) value);
+
+  if (ML_ERROR_NONE == ml_option_get (option, "timeout", &value))
+    g_string_append_printf (tensor_query_client_prop, " timeout=%u ",
+        *((guint *) value));
+
+  if (ML_ERROR_NONE != ml_option_get (option, "caps", &value)) {
     g_string_free (tensor_query_client_prop, TRUE);
+    _ml_service_destroy_internal (mls);
     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
         "The option 'caps' must be set before call ml_service_query_create.");
   }
+  caps = g_strdup ((gchar *) value);
 
   prop = g_string_free (tensor_query_client_prop, FALSE);
   description =
@@ -144,34 +217,31 @@ ml_service_query_create (ml_option_h option, ml_service_h * h)
       ("appsrc name=srcx ! %s ! tensor_query_client %s name=qcx ! tensor_sink name=sinkx async=false sync=false",
       caps, prop);
 
-  g_free (caps);
-  g_free (prop);
-
   status = ml_pipeline_construct (description, NULL, NULL, &pipe_h);
-  g_free (description);
   if (ML_ERROR_NONE != status) {
+    _ml_service_destroy_internal (mls);
     _ml_error_report_return (status, "Failed to construct pipeline");
   }
 
   status = ml_pipeline_start (pipe_h);
   if (ML_ERROR_NONE != status) {
-    _ml_error_report ("Failed to start pipeline");
     ml_pipeline_destroy (pipe_h);
-    return status;
+    _ml_service_destroy_internal (mls);
+    _ml_error_report_return (status, "Failed to start pipeline");
   }
 
   status = ml_pipeline_src_get_handle (pipe_h, "srcx", &src_h);
   if (ML_ERROR_NONE != status) {
     ml_pipeline_destroy (pipe_h);
+    _ml_service_destroy_internal (mls);
     _ml_error_report_return (status, "Failed to get src handle");
   }
 
-  query_s = g_new0 (_ml_service_query_s, 1);
   status = ml_pipeline_sink_register (pipe_h, "sinkx",
       _sink_callback_for_query_client, query_s, &sink_h);
   if (ML_ERROR_NONE != status) {
     ml_pipeline_destroy (pipe_h);
-    g_free (query_s);
+    _ml_service_destroy_internal (mls);
     _ml_error_report_return (status, "Failed to register sink handle");
   }
 
@@ -181,11 +251,7 @@ ml_service_query_create (ml_option_h option, ml_service_h * h)
   query_s->sink_h = sink_h;
   query_s->out_data_queue = g_async_queue_new ();
 
-  mls = g_new0 (ml_service_s, 1);
-  mls->type = ML_SERVICE_TYPE_CLIENT_QUERY;
-  mls->priv = query_s;
-
-  *h = mls;
+  *handle = mls;
 
   return ML_ERROR_NONE;
 }
@@ -194,19 +260,25 @@ ml_service_query_create (ml_option_h option, ml_service_h * h)
  * @brief Requests query client service an output with given input data.
  */
 int
-ml_service_query_request (ml_service_h h, const ml_tensors_data_h input,
+ml_service_query_request (ml_service_h handle, const ml_tensors_data_h input,
     ml_tensors_data_h * output)
 {
   int status = ML_ERROR_NONE;
-  ml_service_s *mls = (ml_service_s *) h;
+  ml_service_s *mls = (ml_service_s *) handle;
   _ml_service_query_s *query;
 
   check_feature_state (ML_FEATURE_SERVICE);
   check_feature_state (ML_FEATURE_INFERENCE);
 
-  if (!h)
+  if (!_ml_service_handle_is_valid (mls))
     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
-        "The parameter, 'h' is NULL. It should be a valid ml_service_h");
+        "The parameter, 'handle' (ml_service_h), is invalid. It should be a valid ml_service_h instance.");
+  if (!input)
+    _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+        "The parameter, 'input' (ml_tensors_data_h), is NULL. It should be a valid ml_tensors_data_h.");
+  if (!output)
+    _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+        "The parameter, 'output' (ml_tensors_data_h *), is NULL. It should be a valid pointer to an instance of ml_tensors_data_h.");
 
   query = (_ml_service_query_s *) mls->priv;
 
