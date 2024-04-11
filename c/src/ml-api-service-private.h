@@ -19,7 +19,7 @@
 
 #include <ml-api-service.h>
 #include <ml-api-inference-internal.h>
-#include <mlops-agent-interface.h>
+#include <ml-agent-interface.h>
 
 #ifdef __cplusplus
 extern "C" {

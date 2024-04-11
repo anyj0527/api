@@ -33,14 +33,16 @@ nnstreamer_dep = dependency('nnstreamer')
 
 support_service_offloading = false
 if get_option('enable-ml-service')
+  libsystemd_dep = dependency('libsystemd')
+  sqlite_dep = dependency('sqlite3')
   json_glib_dep = dependency('json-glib-1.0')
-  mlops_agent_dep = dependency('mlops-agent')
-  nnstreamer_edge_dep = dependency('nnstreamer-edge', required: false)
-  curl_dep = cc.find_library('curl', required: false)
-  if nnstreamer_edge_dep.found() and curl_dep.found()
-    add_project_arguments('-DENABLE_SERVICE_OFFLOADING=1', language: ['c', 'cpp'])
-    support_service_offloading = true
-  endif
+  # mlops_agent_dep = dependency('mlops-agent')
+  # nnstreamer_edge_dep = dependency('nnstreamer-edge', required: false)
+  # curl_dep = cc.find_library('curl', required: false)
+  # if nnstreamer_edge_dep.found() and curl_dep.found()
+  #   add_project_arguments('-DENABLE_SERVICE_OFFLOADING=1', language: ['c', 'cpp'])
+  #   support_service_offloading = true
+  # endif
 endif
 
 # Set version info
@@ -177,6 +179,39 @@ api_conf.set('PREFIX', api_install_prefix)
 api_conf.set('EXEC_PREFIX', api_install_bindir)
 api_conf.set('LIB_INSTALL_DIR', api_install_libdir)
 api_conf.set('INCLUDE_INSTALL_DIR', api_install_includedir)
+
+
+## For ml-agent
+
+# Set install path
+ml_agent_install_prefix = get_option('prefix')
+ml_agent_install_libdir = join_paths(ml_agent_install_prefix, get_option('libdir'))
+ml_agent_install_bindir = join_paths(ml_agent_install_prefix, get_option('bindir'))
+ml_agent_install_includedir = join_paths(ml_agent_install_prefix, get_option('includedir'))
+ml_agent_install_inidir = get_option('sysconfdir')
+
+dbus_policy_dir = join_paths(get_option('sysconfdir'), 'dbus-1', 'system.d')
+dbus_system_service_dir = join_paths(ml_agent_install_prefix, 'share', 'dbus-1', 'system-services')
+systemd_service_dir = join_paths(ml_agent_install_prefix, 'lib', 'systemd', 'system')
+
+plugin_parser_install_dir = join_paths(get_option('sysconfdir'), 'package-manager', 'parserlib', 'metadata')
+plugin_parser_info_txt_install_dir = join_paths(ml_agent_install_prefix, 'share', 'parser-plugins')
+
+ml_agent_version = api_version
+# Set default configuration
+ml_agent_conf = configuration_data()
+ml_agent_conf.set('VERSION', ml_agent_version)
+ml_agent_conf.set('PREFIX', ml_agent_install_prefix)
+ml_agent_conf.set('EXEC_PREFIX', ml_agent_install_bindir)
+ml_agent_conf.set('LIB_INSTALL_DIR', ml_agent_install_libdir)
+ml_agent_conf.set('INCLUDE_INSTALL_DIR', ml_agent_install_includedir)
+
+if get_option('enable-ml-service')
+  subdir('dbus')
+  subdir('daemon')
+  subdir('plugin-parser')
+endif
+## ml-agent
 
 # Build C-API
 subdir('c')

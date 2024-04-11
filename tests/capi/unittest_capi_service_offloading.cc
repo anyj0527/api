@@ -65,8 +65,11 @@ class MLOffloadingService : public ::testing::Test
    */
   void SetUp () override
   {
+    g_autofree gchar *current_dir = g_get_current_dir ();
     g_autofree gchar *services_dir
-        = g_build_filename (EXEC_PREFIX, "ml-test", "services", NULL);
+        = g_build_filename (current_dir, "tests", "services", NULL);
+    // g_autofree gchar *services_dir
+    //     = g_build_filename (EXEC_PREFIX, "ml-test", "services", NULL);
 
     dbus = g_test_dbus_new (G_TEST_DBUS_NONE);
     ASSERT_NE (nullptr, dbus);
