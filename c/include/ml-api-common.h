@@ -104,6 +104,7 @@ typedef enum {
 /**
  * @brief The maximum number of other/tensor instances that other/tensors may have.
  * @since_tizen 5.5
+ * @remarks The maximum size in Tizen APIs is 16 until tizen 7.0 and 256 since 8.0.
  */
 #define ML_TENSOR_SIZE_LIMIT  (16)
 
@@ -200,7 +201,7 @@ int ml_tensors_info_create_extended (ml_tensors_info_h *info);
  * @brief Frees the given handle of a tensors information.
  * @since_tizen 5.5
  * @param[in] info The handle of tensors information.
- * @return 0 on success. Otherwise a negative error value.
+ * @return @c 0 on success. Otherwise a negative error value.
  * @retval #ML_ERROR_NONE Successful.
  * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
  * @retval #ML_ERROR_INVALID_PARAMETER Given parameter is invalid.
@@ -337,7 +338,7 @@ int ml_tensors_info_get_tensor_dimension (ml_tensors_info_h info, unsigned int i
 
 /**
  * @brief Gets the size of tensors data in the given tensors information handle in bytes.
- * @details If an application needs to get the total byte size of tensors, set the @a index '-1'. Note that the maximum number of tensors is 16 (#ML_TENSOR_SIZE_LIMIT).
+ * @details If an application needs to get the total byte size of tensors, set the @a index '-1'. Note that the maximum number of tensors is #ML_TENSOR_SIZE_LIMIT.
  * @since_tizen 5.5
  * @param[in] info The handle of tensors information.
  * @param[in] index The index of the tensor.
@@ -352,9 +353,10 @@ int ml_tensors_info_get_tensor_size (ml_tensors_info_h info, int index, size_t *
 /**
  * @brief Creates a tensor data frame with the given tensors information.
  * @since_tizen 5.5
+ * @remarks The @a data should be released using ml_tensors_data_destroy().
  * @remarks Before 6.0, this function returned #ML_ERROR_STREAMS_PIPE in case of an internal error. Since 6.0, #ML_ERROR_OUT_OF_MEMORY is returned in such cases, so #ML_ERROR_STREAMS_PIPE is not returned by this function anymore.
  * @param[in] info The handle of tensors information for the allocation.
- * @param[out] data The handle of tensors data. The caller is responsible for freeing the allocated data with ml_tensors_data_destroy().
+ * @param[out] data The handle of tensors data.
  * @return @c 0 on success. Otherwise a negative error value.
  * @retval #ML_ERROR_NONE Successful.
  * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
@@ -405,6 +407,34 @@ int ml_tensors_data_get_tensor_data (ml_tensors_data_h data, unsigned int index,
  * @retval #ML_ERROR_INVALID_PARAMETER Given parameter is invalid.
  */
 int ml_tensors_data_set_tensor_data (ml_tensors_data_h data, unsigned int index, const void *raw_data, const size_t data_size);
+
+/**
+ * @brief Copies the tensor data frame.
+ * @since_tizen 9.0
+ * @remarks The @a out should be released using ml_tensors_data_destroy().
+ * @param[in] in The handle of tensors data to be cloned.
+ * @param[out] out The handle of tensors data.
+ * @return @c 0 on success. Otherwise a negative error value.
+ * @retval #ML_ERROR_NONE Successful.
+ * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
+ * @retval #ML_ERROR_INVALID_PARAMETER Given parameter is invalid.
+ * @retval #ML_ERROR_OUT_OF_MEMORY Failed to allocate required memory.
+ */
+int ml_tensors_data_clone (const ml_tensors_data_h in, ml_tensors_data_h *out);
+
+/**
+ * @brief Gets the tensors information of given tensor data frame.
+ * @since_tizen 9.0
+ * @remarks The @a info should be released using ml_tensors_info_destroy().
+ * @param[in] data The handle of tensors data.
+ * @param[out] info The handle of tensors information.
+ * @return @c 0 on success. Otherwise a negative error value.
+ * @retval #ML_ERROR_NONE Successful.
+ * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
+ * @retval #ML_ERROR_INVALID_PARAMETER Given parameter is invalid.
+ * @retval #ML_ERROR_OUT_OF_MEMORY Failed to allocate required memory.
+ */
+int ml_tensors_data_get_info (const ml_tensors_data_h data, ml_tensors_info_h *info);
 
 /**
  * @brief Returns a human-readable string describing the last error.
@@ -500,20 +530,20 @@ int ml_option_get (ml_option_h option, const char *key, void **value);
 
 /**
  * @brief A handle of a ml-information instance.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  */
 typedef void *ml_information_h;
 
 /**
  * @brief A handle of a list of ml-information instance.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  */
 typedef void *ml_information_list_h;
 
 /**
  * @brief Destroys the ml-information instance.
  * @details Note that, user should free the allocated values of ml-information in the case that destroy function is not given.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  * @param[in] ml_info The ml_information handle to be destroyed.
  * @return @c 0 on success. Otherwise a negative error value.
  * @retval #ML_ERROR_NONE Successful.
@@ -525,7 +555,7 @@ int ml_information_destroy (ml_information_h ml_info);
 /**
  * @brief Gets a value of key in ml-information instance.
  * @details This returns the pointer of memory in the handle. If you modify the returned memory (value), the contents of value is updated.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  * @remarks The @a value should not be released. The @a value is available until @a ml_info is destroyed using ml_information_destroy().
  * @param[in] ml_info The handle of ml-information.
  * @param[in] key The key to get the corresponding value.
@@ -540,7 +570,7 @@ int ml_information_get (ml_information_h ml_info, const char *key, void **value)
 /**
  * @brief Destroys the ml-information-list instance.
  * @details Note that, user should free the allocated values of ml-information-list in the case that destroy function is not given.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  * @param[in] ml_info_list The ml-information-list handle to be destroyed.
  * @return @c 0 on success. Otherwise a negative error value.
  * @retval #ML_ERROR_NONE Successful.
@@ -551,7 +581,7 @@ int ml_information_list_destroy (ml_information_list_h ml_info_list);
 
 /**
  * @brief Gets the number of ml-information in ml-information-list instance.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  * @param[in] ml_info_list The handle of ml-information-list.
  * @param[out] length The number of ml-information in ml-information-list.
  * @return @c 0 on success. Otherwise a negative error value.
@@ -563,7 +593,7 @@ int ml_information_list_length (ml_information_list_h ml_info_list, unsigned int
 
 /**
  * @brief Gets a ml-information in ml-information-list instance with given index.
- * @since_tizen 7.0
+ * @since_tizen 8.0
  * @remarks The @a ml_info should not be released. The @a ml_info is available until @a ml_info_list is destroyed using ml_information_list_destroy().
  * @param[in] ml_info_list The handle of ml-information-list.
  * @param[in] index The index of ml-information in ml-information-list.

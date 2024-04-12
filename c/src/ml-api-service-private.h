@@ -19,13 +19,19 @@
 
 #include <ml-api-service.h>
 #include <ml-api-inference-internal.h>
-
-#include "pipeline-dbus.h"
-#include "model-dbus.h"
+#include <ml-agent-interface.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
+
+/**
+ * @brief Macro for the event types of machine learning service.
+ * @todo TBU, need ACR later (update enum for ml-service event, see ml_service_event_cb)
+ */
+#define ML_SERVICE_EVENT_MODEL_REGISTERED 2
+#define ML_SERVICE_EVENT_PIPELINE_REGISTERED 3
+#define ML_SERVICE_EVENT_REPLY 4
 
 /**
  * @brief Enumeration for ml-service type.
@@ -35,7 +41,7 @@ typedef enum
   ML_SERVICE_TYPE_UNKNOWN = 0,
   ML_SERVICE_TYPE_SERVER_PIPELINE,
   ML_SERVICE_TYPE_CLIENT_QUERY,
-  ML_SERVICE_TYPE_REMOTE,
+  ML_SERVICE_TYPE_OFFLOADING,
   ML_SERVICE_TYPE_EXTENSION,
 
   ML_SERVICE_TYPE_MAX
@@ -64,20 +70,19 @@ typedef struct
   void *priv;
 } ml_service_s;
 
-
 /**
  * @brief Structure for ml_service_server
  */
 typedef struct
 {
-  gint64 id;
+  int64_t id;
   gchar *service_name;
 } _ml_service_server_s;
 
 /**
  * @brief Internal function to validate ml-service handle.
  */
-gboolean _ml_service_handle_is_valid (ml_service_s * mls);
+gboolean _ml_service_handle_is_valid (ml_service_s *mls);
 
 /**
  * @brief Internal function to create new ml-service handle.
@@ -87,7 +92,7 @@ ml_service_s * _ml_service_create_internal (ml_service_type_e ml_service_type);
 /**
  * @brief Internal function to release ml-service handle.
  */
-int _ml_service_destroy_internal (ml_service_s * mls);
+int _ml_service_destroy_internal (ml_service_s *mls);
 
 /**
  * @brief Internal function to get ml-service event callback.
@@ -107,12 +112,12 @@ int _ml_service_conf_parse_tensors_info (JsonNode *info_node, ml_tensors_info_h 
 /**
  * @brief Internal function to release ml-service pipeline data.
  */
-int ml_service_pipeline_release_internal (ml_service_s * mls);
+int ml_service_pipeline_release_internal (ml_service_s *mls);
 
 /**
  * @brief Internal function to release ml-service query data.
  */
-int ml_service_query_release_internal (ml_service_s * mls);
+int ml_service_query_release_internal (ml_service_s *mls);
 
 #ifdef __cplusplus
 }

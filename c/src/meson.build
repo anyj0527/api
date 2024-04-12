@@ -100,23 +100,26 @@ nns_capi_dep = declare_dependency(link_with: nns_capi_lib,
 
 # Service API
 if get_option('enable-ml-service')
+  ml_service_deps = [nns_capi_dep, gio_dep, ml_agent_dep, json_glib_dep]
+  if get_option('enable-tizen')
+    ml_service_deps += dependency('capi-appfw-app-common')
+  endif
+
   nns_capi_service_shared_lib = shared_library ('capi-ml-service',
     nns_capi_service_srcs,
-    dependencies: [nns_capi_dep, ml_agentd_deps],
-    include_directories: [nns_capi_include, ml_agentd_incs],
+    dependencies: ml_service_deps,
+    include_directories: nns_capi_include,
     install: true,
     install_dir: api_install_libdir,
-    link_with: ml_agentd_lib,
-    version: api_version,
+    version: api_version
   )
 
   nns_capi_service_static_lib = static_library ('capi-ml-service',
     nns_capi_service_srcs,
-    dependencies: [nns_capi_dep, ml_agentd_deps],
-    include_directories: [nns_capi_include, ml_agentd_incs],
+    dependencies: ml_service_deps,
+    include_directories: nns_capi_include,
     install: true,
-    link_with: ml_agentd_lib,
-    install_dir: api_install_libdir,
+    install_dir: api_install_libdir
   )
 
   nns_capi_service_lib = nns_capi_service_shared_lib
@@ -125,7 +128,7 @@ if get_option('enable-ml-service')
   endif
 
   nns_capi_service_dep = declare_dependency(link_with: nns_capi_service_lib,
-    dependencies: [nns_capi_dep, ml_agentd_deps],
+    dependencies: ml_service_deps,
     include_directories: nns_capi_include
   )
 endif

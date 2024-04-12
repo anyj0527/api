@@ -1,8 +1,8 @@
 /**
  * @file        unittest_gdbus_util.cc
  * @date        2 May 2023
- * @brief       Unit test for GDBus Utility functions
- * @see         https://github.com/nnstreamer/api
+ * @brief       Unit test for GDBus utility functions
+ * @see         https://github.com/nnstreamer/deviceMLOps.MLAgent
  * @author      Wook Song <wook16.song@samsung.com>
  * @bug         No known bugs
  */
@@ -11,11 +11,50 @@
 
 #include "dbus-interface.h"
 #include "gdbus-util.h"
+#include "log.h"
 
 /**
- * @brief Negative test for the gdbus helper function, gdbus_export_interface
+ * @brief Test base class for GDbus.
  */
-TEST (gdbusInstanceNotInitialized, export_interface_n)
+class GDbusTest : public ::testing::Test
+{
+  protected:
+  GTestDBus *dbus;
+
+  public:
+  /**
+   * @brief Setup method for each test case.
+   */
+  void SetUp () override
+  {
+    g_autofree gchar *current_dir = g_get_current_dir ();
+    g_autofree gchar *services_dir
+        = g_build_filename (current_dir, "tests", "services", NULL);
+
+    dbus = g_test_dbus_new (G_TEST_DBUS_NONE);
+    ASSERT_TRUE (dbus != nullptr);
+
+    g_test_dbus_add_service_dir (dbus, services_dir);
+    g_test_dbus_up (dbus);
+  }
+
+  /**
+   * @brief Teardown method for each test case.
+   */
+  void TearDown () override
+  {
+    if (dbus) {
+      g_test_dbus_down (dbus);
+      g_object_unref (dbus);
+      dbus = nullptr;
+    }
+  }
+};
+
+/**
+ * @brief Negative test for the gdbus helper function, gdbus_export_interface().
+ */
+TEST (GDbusInstanceNotInitialized, export_interface_n)
 {
   int ret;
 
@@ -30,24 +69,20 @@ TEST (gdbusInstanceNotInitialized, export_interface_n)
 }
 
 /**
- * @brief Negative test for the gdbus helper function, get_system_connection
+ * @brief Negative test for the gdbus helper function, get_system_connection().
  */
-TEST (gdbusInstanceNotInitialized, get_system_connection_n)
+TEST (GDbusInstanceNotInitialized, get_system_connection_n)
 {
-  gboolean is_session = true;
   int ret;
 
-  /**
-   * FIXME: The following line blocks this test from running
-   * with the ml-agent daemon, not the test daemon.
-   */
-  if (!gdbus_get_system_connection (!is_session)) {
+  if (!gdbus_get_system_connection (false)) {
     return;
   }
-  ret = gdbus_get_system_connection (is_session);
+
+  ret = gdbus_get_system_connection (true);
   EXPECT_EQ (-ENOSYS, ret);
 
-  ret = gdbus_get_system_connection (!is_session);
+  ret = gdbus_get_system_connection (false);
   EXPECT_EQ (-ENOSYS, ret);
 }
 
@@ -62,13 +97,13 @@ main (int argc, char **argv)
   try {
     testing::InitGoogleTest (&argc, argv);
   } catch (...) {
-    g_warning ("catch 'testing::internal::<unnamed>::ClassUniqueToAlwaysTrue'");
+    ml_logw ("catch 'testing::internal::<unnamed>::ClassUniqueToAlwaysTrue'");
   }
 
   try {
     result = RUN_ALL_TESTS ();
   } catch (...) {
-    g_warning ("catch `testing::internal::GoogleTestFailureException`");
+    ml_logw ("catch `testing::internal::GoogleTestFailureException`");
   }
 
   return result;

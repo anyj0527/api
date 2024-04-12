@@ -1,0 +1,8 @@
+{
+  "models" : {
+    "name" : "dummy-allowed-model",
+    "model" : "dummy-allowed.tflite",
+    "description" : "This is dummy allowed model",
+    "activate" : "true"
+  }
+}

@@ -2,12 +2,12 @@
 /**
  * Copyright (c) 2022 Samsung Electronics Co., Ltd. All Rights Reserved.
  *
- * @file model-dbus-impl.cc
- * @date 29 Jul 2022
- * @brief DBus implementation for Model Interface
- * @see	https://github.com/nnstreamer/api
- * @author Sangjung Woo <sangjung.woo@samsung.com>
- * @bug No known bugs except for NYI items
+ * @file    model-dbus-impl.cc
+ * @date    29 Jul 2022
+ * @brief   DBus implementation for Model Interface
+ * @see     https://github.com/nnstreamer/deviceMLOps.MLAgent
+ * @author  Sangjung Woo <sangjung.woo@samsung.com>
+ * @bug     No known bugs except for NYI items
  */
 
 #include <errno.h>
@@ -19,7 +19,7 @@
 #include "log.h"
 #include "model-dbus.h"
 #include "modules.h"
-#include "service-db.hh"
+#include "service-db-util.h"
 
 static MachinelearningServiceModel *g_gdbus_instance = NULL;
 
@@ -57,22 +57,10 @@ gdbus_cb_model_register (MachinelearningServiceModel *obj,
     GDBusMethodInvocation *invoc, const gchar *name, const gchar *path,
     const bool is_active, const gchar *description, const gchar *app_info)
 {
-  int ret = 0;
+  gint ret = 0;
   guint version = 0U;
-  MLServiceDB &db = MLServiceDB::getInstance ();
 
-  try {
-    db.connectDB ();
-    db.set_model (name, path, is_active, description, app_info, &version);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
+  ret = svcdb_model_add (name, path, is_active, description, app_info, &version);
   machinelearning_service_model_complete_register (obj, invoc, version, ret);
 
   return TRUE;
@@ -93,21 +81,9 @@ gdbus_cb_model_update_description (MachinelearningServiceModel *obj,
     GDBusMethodInvocation *invoc, const gchar *name, const guint version,
     const gchar *description)
 {
-  int ret = 0;
-  MLServiceDB &db = MLServiceDB::getInstance ();
+  gint ret = 0;
 
-  try {
-    db.connectDB ();
-    db.update_model_description (name, version, description);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
+  ret = svcdb_model_update_description (name, version, description);
   machinelearning_service_model_complete_update_description (obj, invoc, ret);
 
   return TRUE;
@@ -126,21 +102,9 @@ static gboolean
 gdbus_cb_model_activate (MachinelearningServiceModel *obj,
     GDBusMethodInvocation *invoc, const gchar *name, const guint version)
 {
-  int ret = 0;
-  MLServiceDB &db = MLServiceDB::getInstance ();
+  gint ret = 0;
 
-  try {
-    db.connectDB ();
-    db.activate_model (name, version);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
+  ret = svcdb_model_activate (name, version);
   machinelearning_service_model_complete_activate (obj, invoc, ret);
 
   return TRUE;
@@ -158,24 +122,11 @@ static gboolean
 gdbus_cb_model_get (MachinelearningServiceModel *obj,
     GDBusMethodInvocation *invoc, const gchar *name, const guint version)
 {
-  int ret = 0;
-  std::string model_info;
-  MLServiceDB &db = MLServiceDB::getInstance ();
+  gint ret = 0;
+  g_autofree gchar *model_info = NULL;
 
-  try {
-    db.connectDB ();
-    db.get_model (name, model_info, version);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
-  machinelearning_service_model_complete_get_activated (
-      obj, invoc, model_info.c_str (), ret);
+  ret = svcdb_model_get (name, version, &model_info);
+  machinelearning_service_model_complete_get (obj, invoc, model_info, ret);
 
   return TRUE;
 }
@@ -192,24 +143,11 @@ static gboolean
 gdbus_cb_model_get_activated (MachinelearningServiceModel *obj,
     GDBusMethodInvocation *invoc, const gchar *name)
 {
-  int ret = 0;
-  std::string model_info;
-  MLServiceDB &db = MLServiceDB::getInstance ();
+  gint ret = 0;
+  g_autofree gchar *model_info = NULL;
 
-  try {
-    db.connectDB ();
-    db.get_model (name, model_info, -1);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
-  machinelearning_service_model_complete_get_activated (
-      obj, invoc, model_info.c_str (), ret);
+  ret = svcdb_model_get_activated (name, &model_info);
+  machinelearning_service_model_complete_get_activated (obj, invoc, model_info, ret);
 
   return TRUE;
 }
@@ -226,24 +164,11 @@ static gboolean
 gdbus_cb_model_get_all (MachinelearningServiceModel *obj,
     GDBusMethodInvocation *invoc, const gchar *name)
 {
-  int ret = 0;
-  MLServiceDB &db = MLServiceDB::getInstance ();
-  std::string all_model_list;
+  gint ret = 0;
+  g_autofree gchar *model_info = NULL;
 
-  try {
-    db.connectDB ();
-    db.get_model (name, all_model_list, 0);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
-
-  machinelearning_service_model_complete_get (obj, invoc, all_model_list.c_str (), ret);
+  ret = svcdb_model_get_all (name, &model_info);
+  machinelearning_service_model_complete_get_all (obj, invoc, model_info, ret);
 
   return TRUE;
 }
@@ -255,27 +180,16 @@ gdbus_cb_model_get_all (MachinelearningServiceModel *obj,
  * @param invoc Method invocation handle.
  * @param name The name of target model.
  * @param version The version of target model.
+ * @param force If the force is set to @c TRUE, the target model will be forced to delete.
  * @return @c TRUE if the request is handled. FALSE if the service is not available.
  */
 static gboolean
 gdbus_cb_model_delete (MachinelearningServiceModel *obj,
-    GDBusMethodInvocation *invoc, const gchar *name, const guint version)
+    GDBusMethodInvocation *invoc, const gchar *name, const guint version, const gboolean force)
 {
-  int ret = 0;
-  MLServiceDB &db = MLServiceDB::getInstance ();
+  gint ret = 0;
 
-  try {
-    db.connectDB ();
-    db.delete_model (name, version);
-  } catch (const std::invalid_argument &e) {
-    _E ("%s", e.what ());
-    ret = -EINVAL;
-  } catch (const std::exception &e) {
-    _E ("%s", e.what ());
-    ret = -EIO;
-  }
-
-  db.disconnectDB ();
+  ret = svcdb_model_delete (name, version, force);
   machinelearning_service_model_complete_delete (obj, invoc, ret);
 
   return TRUE;
@@ -336,24 +250,25 @@ static int
 probe_model_module (void *data)
 {
   int ret = 0;
-  _D ("probe_model_module");
+
+  ml_logd ("probe_model_module");
 
   g_gdbus_instance = gdbus_get_model_instance ();
   if (NULL == g_gdbus_instance) {
-    _E ("cannot get a dbus instance for the %s interface\n", DBUS_MODEL_INTERFACE);
+    ml_loge ("cannot get a dbus instance for the %s interface\n", DBUS_MODEL_INTERFACE);
     return -ENOSYS;
   }
 
   ret = gdbus_connect_signal (g_gdbus_instance, ARRAY_SIZE (handler_infos), handler_infos);
   if (ret < 0) {
-    _E ("cannot register callbacks as the dbus method invocation handlers\n ret: %d", ret);
+    ml_loge ("cannot register callbacks as the dbus method invocation handlers\n ret: %d", ret);
     ret = -ENOSYS;
     goto out;
   }
 
   ret = gdbus_export_interface (g_gdbus_instance, DBUS_MODEL_PATH);
   if (ret < 0) {
-    _E ("cannot export the dbus interface '%s' at the object path '%s'\n",
+    ml_loge ("cannot export the dbus interface '%s' at the object path '%s'\n",
         DBUS_MODEL_INTERFACE, DBUS_MODEL_PATH);
     ret = -ENOSYS;
     goto out_disconnect;
@@ -376,6 +291,7 @@ out:
 static void
 init_model_module (void *data)
 {
+  gdbus_initialize ();
 }
 
 /**

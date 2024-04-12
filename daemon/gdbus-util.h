@@ -8,7 +8,7 @@
  * @file    gdbus-util.h
  * @date    25 June 2022
  * @brief   Internal GDbus utility header of Machine Learning agent daemon
- * @see     https://github.com/nnstreamer/api
+ * @see     https://github.com/nnstreamer/deviceMLOps.MLAgent
  * @author  Sangjung Woo <sangjung.woo@samsung.com>
  * @bug     No known bugs except for NYI items
  *
@@ -20,6 +20,7 @@
 
 #include <glib.h>
 #include <gio/gio.h>
+#include <gst/gst.h>
 #include <stdbool.h>
 
 #ifdef __cplusplus
@@ -83,6 +84,11 @@ int gdbus_get_system_connection (gboolean is_session);
  * @brief Disconnect the DBus message bus.
  */
 void gdbus_put_system_connection (void);
+
+/**
+ * @brief Common function to initialize the DBus module.
+ */
+void gdbus_initialize (void);
 
 #ifdef __cplusplus
 }

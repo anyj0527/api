@@ -2,7 +2,7 @@
 /**
  * Copyright (c) 2022 Samsung Electronics Co., Ltd. All Rights Reserved.
  *
- * @file ml-api-service-common.c
+ * @file ml-api-service.c
  * @date 31 Aug 2022
  * @brief Some implementation of NNStreamer/Service C-API
  * @see https://github.com/nnstreamer/nnstreamer
@@ -12,11 +12,7 @@
 
 #include <nnstreamer_plugin_api_util.h>
 
-// #include "ml-api-internal.h"
 #include "ml-api-service.h"
-// #include "ml-api-service-private.h"
-#include "ml-agent-dbus-interface.h"
-
 #include "ml-api-service-extension.h"
 
 #define ML_SERVICE_MAGIC 0xfeeedeed
@@ -37,7 +33,6 @@ _ml_service_handle_is_valid (ml_service_s * mls)
   switch (mls->type) {
     case ML_SERVICE_TYPE_SERVER_PIPELINE:
     case ML_SERVICE_TYPE_CLIENT_QUERY:
-    case ML_SERVICE_TYPE_REMOTE:
     case ML_SERVICE_TYPE_EXTENSION:
       if (mls->priv == NULL)
         return FALSE;
@@ -131,7 +126,6 @@ _ml_service_destroy_internal (ml_service_s * mls)
       break;
     case ML_SERVICE_TYPE_CLIENT_QUERY:
       status = ml_service_query_release_internal (mls);
-      break;
       break;
     case ML_SERVICE_TYPE_EXTENSION:
       status = ml_service_extension_destroy (mls);
@@ -274,6 +268,140 @@ _ml_service_conf_parse_tensors_info (JsonNode * info_node,
   return status;
 }
 
+// /**
+//  * @brief Internal function to parse service info from config file.
+//  */
+// static int
+// _ml_service_offloading_conf_to_opt (ml_service_s * mls, JsonObject * object,
+//     const gchar * name, ml_option_h option)
+// {
+//   int status = ML_ERROR_NONE;
+//   JsonObject *offloading_object;
+//   const gchar *val = NULL;
+//   const gchar *key = NULL;
+//   GList *list = NULL, *iter;
+
+//   offloading_object = json_object_get_object_member (object, name);
+//   if (!offloading_object) {
+//     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
+//         "Failed to get %s member from the config file", name);
+//   }
+
+//   list = json_object_get_members (offloading_object);
+//   for (iter = list; iter != NULL; iter = g_list_next (iter)) {
+//     key = iter->data;
+//     if (g_ascii_strcasecmp (key, "training") == 0) {
+//       /* It is not a value to set for option. */
+//       continue;
+//     }
+//     val = json_object_get_string_member (offloading_object, key);
+//     status = ml_option_set (option, key, g_strdup (val), g_free);
+//     if (status != ML_ERROR_NONE) {
+//       _ml_error_report ("Failed to set %s option: %s.", key, val);
+//       break;
+//     }
+//   }
+//   g_list_free (list);
+
+//   return status;
+// }
+
+// /**
+//  * @brief Internal function to parse service info from config file.
+//  */
+// static int
+// _ml_service_offloading_parse_services (ml_service_s * mls, JsonObject * object)
+// {
+//   GList *list, *iter;
+//   JsonNode *json_node = NULL;
+//   int status = ML_ERROR_NONE;
+
+//   list = json_object_get_members (object);
+//   for (iter = list; iter != NULL; iter = g_list_next (iter)) {
+//     const gchar *key = iter->data;
+//     gchar *val = NULL;
+
+//     json_node = json_object_get_member (object, key);
+//     val = json_to_string (json_node, TRUE);
+//     if (val) {
+//       status = ml_service_offloading_set_service (mls, key, val);
+//       g_free (val);
+
+//       if (status != ML_ERROR_NONE) {
+//         _ml_error_report ("Failed to set service key : %s", key);
+//         break;
+//       }
+//     }
+//   }
+//   g_list_free (list);
+
+//   return status;
+// }
+
+// /**
+//  * @brief Internal function to parse configuration file to create offloading service.
+//  */
+// static int
+// _ml_service_offloading_create_json (ml_service_s * mls, JsonObject * object)
+// {
+//   int status;
+//   ml_option_h option;
+
+//   status = ml_option_create (&option);
+//   if (status != ML_ERROR_NONE) {
+//     _ml_error_report_return (status, "Failed to create ml-option.");
+//   }
+
+//   status =
+//       _ml_service_offloading_conf_to_opt (mls, object, "offloading", option);
+//   if (status != ML_ERROR_NONE) {
+//     _ml_error_report ("Failed to set ml-option from config file.");
+//     goto done;
+//   }
+
+//   status = ml_service_offloading_create (mls, option);
+//   if (status != ML_ERROR_NONE) {
+//     _ml_error_report ("Failed to create ml-service-offloading.");
+//     goto done;
+//   }
+//   if (json_object_has_member (object, "services")) {
+//     JsonObject *svc_object;
+//     svc_object = json_object_get_object_member (object, "services");
+//     status = _ml_service_offloading_parse_services (mls, svc_object);
+//     if (status != ML_ERROR_NONE) {
+//       _ml_logw ("Failed to parse services from config file.");
+//     }
+//   }
+
+//   status = ml_service_training_offloading_create (mls, object);
+//   if (status != ML_ERROR_NONE) {
+//     _ml_logw ("Failed to parse training from config file.");
+//   }
+
+// done:
+//   ml_option_destroy (option);
+//   return status;
+// }
+
+/**
+ * @brief Internal function to get ml-service type.
+ */
+static ml_service_type_e
+_ml_service_get_type (JsonObject * object)
+{
+  ml_service_type_e type = ML_SERVICE_TYPE_UNKNOWN;
+
+  /** @todo add more services such as training offloading, offloading service */
+  if (json_object_has_member (object, "single") ||
+      json_object_has_member (object, "pipeline")) {
+    type = ML_SERVICE_TYPE_EXTENSION;
+  } else if (json_object_has_member (object, "offloading")) {
+    // type = ML_SERVICE_TYPE_OFFLOADING;
+  }
+
+  return type;
+}
+
 /**
  * @brief Creates a handle for machine learning service with configuration.
  */
@@ -330,10 +458,8 @@ ml_service_new (const char *config, ml_service_h * handle)
 
   object = json_node_get_object (root);
 
-  if (json_object_has_member (object, "single") ||
-      json_object_has_member (object, "pipeline")) {
-    service_type = ML_SERVICE_TYPE_EXTENSION;
-  } else {
+  service_type = _ml_service_get_type (object);
+  if (ML_SERVICE_TYPE_UNKNOWN == service_type) {
     _ml_error_report_return (ML_ERROR_INVALID_PARAMETER,
         "Failed to parse configuration file, cannot get the valid type from configuration.");
   }
@@ -431,9 +557,8 @@ ml_service_start (ml_service_h handle)
     case ML_SERVICE_TYPE_SERVER_PIPELINE:
     {
       _ml_service_server_s *server = (_ml_service_server_s *) mls->priv;
-      g_autoptr (GError) err = NULL;
 
-      status = ml_agent_dbus_interface_pipeline_start (server->id, &err);
+      status = ml_agent_pipeline_start (server->id);
       if (status < 0)
         _ml_error_report ("Failed to invoke the method start_pipeline.");
 
@@ -471,9 +596,8 @@ ml_service_stop (ml_service_h handle)
     case ML_SERVICE_TYPE_SERVER_PIPELINE:
     {
       _ml_service_server_s *server = (_ml_service_server_s *) mls->priv;
-      g_autoptr (GError) err = NULL;
 
-      status = ml_agent_dbus_interface_pipeline_stop (server->id, &err);
+      status = ml_agent_pipeline_stop (server->id);
       if (status < 0)
         _ml_error_report ("Failed to invoke the method stop_pipeline.");
 

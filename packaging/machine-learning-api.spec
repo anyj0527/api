@@ -154,12 +154,16 @@ BuildConflicts:	libarmcl-release
 %endif # unit_test
 
 %if 0%{?enable_ml_service}
+%if %{with tizen}
+BuildRequires:	pkgconfig(dlog)
+BuildRequires:	pkgconfig(libtzplatform-config)
+BuildRequires:	pkgconfig(capi-appfw-app-common)
+BuildRequires:	pkgconfig(pkgmgr-info)
+%endif
 BuildRequires:  pkgconfig(libsystemd)
 BuildRequires:  pkgconfig(sqlite3)
 BuildRequires:  pkgconfig(json-glib-1.0)
 BuildRequires:  dbus
-BuildRequires:  pkgconfig(capi-appfw-package-manager)
-BuildRequires:	pkgconfig(capi-appfw-app-common)
 %endif
 
 %description
@@ -253,6 +257,14 @@ Requires:	libmachine-learning-agent = %{version}-%{release}
 %description -n machine-learning-agent
 AI Service Daemon
 
+%package test
+Summary:	ML service agent for testing purposes
+Requires:	dbus
+%description test
+ML agent binary for the testing purposes
+This package provides the ML agent (daemon) to the other packages that
+require testing with the ML Agent service.
+
 %package -n capi-machine-learning-service
 Summary:	Tizen Machine Learning Service API
 Group:		Machine Learning/ML Framework
@@ -280,6 +292,7 @@ Static library of Tizen Machine Learning Service API.
 %package -n capi-machine-learning-unittests
 Summary:	Unittests for Tizen Machine Learning API
 Group:		Machine Learning/ML Framework
+Requires: mlagent-test = %{version}-%{release}
 Requires:	capi-machine-learning-inference = %{version}-%{release}
 %description -n capi-machine-learning-unittests
 Unittests for Tizen Machine Learning API.
@@ -394,6 +407,7 @@ bash %{test_script} ./tests/daemon/unittest_service_db
 bash %{test_script} ./tests/daemon/unittest_gdbus_util
 bash %{test_script} ./tests/capi/unittest_capi_service_extension
 bash %{test_script} ./tests/capi/unittest_capi_service_agent_client
+bash %{test_script} ./tests/plugin-parser/unittest_mlops_plugin_parser
 %endif
 
 %if 0%{?nnfw_support}
@@ -498,15 +512,14 @@ install -m 0755 packaging/run-unittest.sh %{buildroot}%{_bindir}/tizen-unittests
 %if 0%{?enable_ml_service}
 %files -n libmachine-learning-agent
 %manifest machine-learning-agent.manifest
-%{_libdir}/libml-agentd.so.*
+%{_libdir}/libml-agent.so.*
 
-#TODO: Need to provide a pkg-config file
 %files -n libmachine-learning-agent-devel
 %manifest machine-learning-agent.manifest
-%{_libdir}/libml-agentd.so
-%{_libdir}/libml-agentd.a
-%{_includedir}/ml-agentd/ml-agent-dbus-interface.h
-
+%{_libdir}/libml-agent.so
+%{_libdir}/libml-agent.a
+%{_includedir}/ml-agent/ml-agent-interface.h
+%{_libdir}/pkgconfig/ml-agent.pc
 
 %files -n machine-learning-agent
 %manifest machine-learning-agent.manifest
@@ -514,6 +527,14 @@ install -m 0755 packaging/run-unittest.sh %{buildroot}%{_bindir}/tizen-unittests
 %attr(0644,root,root) %{_unitdir}/machine-learning-agent.service
 %attr(0644,root,root) %config %{_sysconfdir}/dbus-1/system.d/machine-learning-agent.conf
 %attr(0644,root,root) %{_datadir}/dbus-1/system-services/org.tizen.machinelearning.service.service
+%{_sysconfdir}/package-manager/parserlib/metadata/libmlops-plugin-parser.so
+%{_datadir}/parser-plugins/mlops-plugin-parser.info
+
+%files test
+%manifest machine-learning-agent.manifest
+%{_bindir}/unittest-ml/machine-learning-agent-test
+%{_bindir}/unittest-ml/tests/services/org.tizen.machinelearning.service.service
+%{_libdir}/libml-agent-test.*
 
 %files -n capi-machine-learning-service
 %manifest capi-machine-learning-inference.manifest
@@ -534,9 +555,7 @@ install -m 0755 packaging/run-unittest.sh %{buildroot}%{_bindir}/tizen-unittests
 %files -n capi-machine-learning-unittests
 %manifest capi-machine-learning-inference.manifest
 %{_bindir}/unittest-ml
-%{_libdir}/libml-agentd-test.a
-%{_libdir}/libml-agentd-test.so*
-%{_libdir}/libunittest_mock.so*
+
 %if 0%{?gcov:1}
 %{_bindir}/tizen-unittests/%{name}/run-unittest.sh
 %endif
