@@ -2,12 +2,12 @@
 /**
  * Copyright (c) 2022 Samsung Electronics Co., Ltd. All Rights Reserved.
  *
- * @file modules.c
- * @date 25 June 2022
- * @brief NNStreamer/Utilities C-API Wrapper.
- * @see	https://github.com/nnstreamer/api
- * @author Sangjung Woo <sangjung.woo@samsung.com>
- * @bug No known bugs except for NYI items
+ * @file    modules.c
+ * @date    25 June 2022
+ * @brief   Internal module utility header of Machine Learning agent daemon
+ * @see     https://github.com/nnstreamer/deviceMLOps.MLAgent
+ * @author  Sangjung Woo <sangjung.woo@samsung.com>
+ * @bug     No known bugs except for NYI items
  */
 
 #include <glib.h>
@@ -52,7 +52,7 @@ init_modules (void *data)
     elem_n = elem->next;
 
     if (module->probe && module->probe (data) != 0) {
-      _E ("[%s] probe fail", module->name);
+      ml_loge ("[%s] probe fail", module->name);
       module_head = g_list_remove (module_head, (gconstpointer) module);
       elem = elem_n;
       continue;

@@ -20,6 +20,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define STR_IS_VALID(s) ((s) && (s)[0] != '\0')
+
 /**
  * DO NOT USE THE LOG INFRA of NNSTREAMER.
  *  This header is supposed to be independent from nnstreamer.git
@@ -275,6 +277,11 @@ size_t _ml_tensor_info_get_size (const ml_tensor_info_s *info, bool is_extended)
 int _ml_tensors_info_initialize (ml_tensors_info_s *info);
 
 /**
+ * @brief Creates new tensors-info handle and copies tensors information.
+ */
+int _ml_tensors_info_create_from (const ml_tensors_info_h in, ml_tensors_info_h *out);
+
+/**
  * @brief Frees and initialize the data in tensors info.
  * @since_tizen 5.5
  * @param[in] info The tensors info pointer to be freed.
@@ -350,6 +357,39 @@ int _ml_tensors_data_destroy_internal (ml_tensors_data_h data, gboolean free_dat
  * @return @c 0 on success. Otherwise a negative error value.
  */
 int _ml_tensors_data_create_no_alloc (const ml_tensors_info_h info, ml_tensors_data_h *data);
+
+/**
+ * @brief Creates ml-information instance.
+ * @since_tizen 7.0
+ * @remarks The @a ml_info should be released using ml_information_destroy().
+ * @param[out] ml_info Newly created ml_info handle is returned.
+ * @return @c 0 on success. Otherwise a negative error value.
+ * @retval #ML_ERROR_NONE Successful.
+ * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
+ * @retval #ML_ERROR_INVALID_PARAMETER Fail. The parameter is invalid.
+ * @retval #ML_ERROR_OUT_OF_MEMORY Failed to allocate required memory.
+ */
+int _ml_information_create (ml_information_h *ml_info);
+
+/**
+ * @brief Sets a new key-value in ml-information instance.
+ * @details Note that the @a value should be valid during single task and be freed after destroying the ml-information instance unless proper @a destroy function is given. When duplicated @a key is given, the corresponding @a value is updated with the new one.
+ * @since_tizen 7.0
+ * @param[in] ml_info The handle of ml-information.
+ * @param[in] key The key to be set.
+ * @param[in] value The value to be set.
+ * @param[in] destroy The function to destroy the value. It is called when the ml-information instance is destroyed.
+ * @return @c 0 on success. Otherwise a negative error value.
+ * @retval #ML_ERROR_NONE Successful.
+ * @retval #ML_ERROR_NOT_SUPPORTED Not supported.
+ * @retval #ML_ERROR_INVALID_PARAMETER Fail. The parameter is invalid.
+ */
+int _ml_information_set (ml_information_h ml_info, const char *key, void *value, ml_data_destroy_cb destroy);
+
+/**
+ * @brief Creates an ml-information-list instance and returns the handle.
+ */
+int _ml_information_list_create (const unsigned int length, ml_information_list_h *list);
 
 #if defined (__TIZEN__)
 /****** TIZEN CHECK FEATURE BEGINS *****/

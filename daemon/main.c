@@ -2,12 +2,12 @@
 /**
  * Copyright (c) 2022 Samsung Electronics Co., Ltd. All Rights Reserved.
  *
- * @file main.c
- * @date 25 June 2022
- * @brief core module for the Machine Learning agent daemon
- * @see	https://github.com/nnstreamer/api
- * @author Sangjung Woo <sangjung.woo@samsung.com>
- * @bug No known bugs except for NYI items
+ * @file    main.c
+ * @date    25 June 2022
+ * @brief   Core module for the Machine Learning agent
+ * @see     https://github.com/nnstreamer/deviceMLOps.MLAgent
+ * @author  Sangjung Woo <sangjung.woo@samsung.com>
+ * @bug     No known bugs except for NYI items
  */
 
 #include <stdio.h>
@@ -21,11 +21,12 @@
 #include "gdbus-util.h"
 #include "log.h"
 #include "dbus-interface.h"
-#include "pkg-mgr.h"
+#include "service-db-util.h"
 
 static GMainLoop *g_mainloop = NULL;
 static gboolean verbose = FALSE;
 static gboolean is_session = FALSE;
+static gchar *db_path = NULL;
 
 /**
  * @brief Handle the SIGTERM signal and quit the main loop
@@ -33,7 +34,7 @@ static gboolean is_session = FALSE;
 static void
 handle_sigterm (int signo)
 {
-  _D ("received SIGTERM signal %d", signo);
+  ml_logd ("received SIGTERM signal %d", signo);
   g_main_loop_quit (g_mainloop);
 }
 
@@ -45,6 +46,7 @@ static int
 postinit (void)
 {
   int ret;
+
   /** Register signal handler */
   signal (SIGTERM, handle_sigterm);
 
@@ -62,19 +64,20 @@ postinit (void)
 static int
 parse_args (gint *argc, gchar ***argv)
 {
-  GError *err;
+  GError *err = NULL;
   GOptionContext *context = NULL;
   gboolean ret;
 
   static GOptionEntry entries[] = {
     { "verbose", 'v', 0, G_OPTION_ARG_NONE, &verbose, "Be verbose", NULL },
     { "session", 's', 0, G_OPTION_ARG_NONE, &is_session, "Bus type is session", NULL },
+    { "path", 'p', 0, G_OPTION_ARG_STRING, &db_path, "Path to database", NULL },
     { NULL }
   };
 
   context = g_option_context_new (NULL);
   if (!context) {
-    _E ("Failed to call g_option_context_new\n");
+    ml_loge ("Failed to call g_option_context_new\n");
     return -ENOMEM;
   }
 
@@ -82,11 +85,10 @@ parse_args (gint *argc, gchar ***argv)
   g_option_context_set_help_enabled (context, TRUE);
   g_option_context_set_ignore_unknown_options (context, TRUE);
 
-  err = NULL;
   ret = g_option_context_parse (context, argc, argv, &err);
   g_option_context_free (context);
   if (!ret) {
-    _E ("Fail to option parsing: %s", err->message);
+    ml_loge ("Fail to option parsing: %s", err->message);
     g_clear_error (&err);
     return -EINVAL;
   }
@@ -100,21 +102,23 @@ parse_args (gint *argc, gchar ***argv)
 int
 main (int argc, char **argv)
 {
+  int ret = 0;
   if (parse_args (&argc, &argv)) {
-    return -EINVAL;
+    ret = -EINVAL;
+    goto error;
   }
+
+  /* path to database */
+  if (!db_path)
+    db_path = g_strdup (DB_PATH);
+  svcdb_initialize (db_path);
 
   g_mainloop = g_main_loop_new (NULL, FALSE);
   gdbus_get_system_connection (is_session);
 
   init_modules (NULL);
   if (postinit () < 0)
-    _E ("cannot init system");
-
-  /* Register package manager callback */
-  if (pkg_mgr_init () < 0) {
-    _E ("cannot init package manager");
-  }
+    ml_loge ("cannot init system");
 
   g_main_loop_run (g_mainloop);
   exit_modules (NULL);
@@ -123,8 +127,11 @@ main (int argc, char **argv)
   g_main_loop_unref (g_mainloop);
   g_mainloop = NULL;
 
-  if (pkg_mgr_deinit () < 0)
-    _W ("cannot finalize package manager");
+error:
+  svcdb_finalize ();
 
-  return 0;
+  is_session = verbose = FALSE;
+  g_free (db_path);
+  db_path = NULL;
+  return ret;
 }
